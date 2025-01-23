@@ -398,3 +398,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+/Cyphers/Intermediate
+/Cyphers/Binaries/Win64
+/Cyphers/Saved
