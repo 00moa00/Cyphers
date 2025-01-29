@@ -20,7 +20,18 @@ public:
 	ACyphersCharacterPlayer();
 
 protected:
+	//virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
+
+	//빙의됐을 때 호출 되는 함수
+	//클라이언트에서는 이 함수를 호출시키지 않는다.
+	virtual void PossessedBy(AController* NewController) override;
+
+	//오너의 값이 변경되면(예를 들어 서버로부터 복제 되었을 때) 호출되는 함수
+	//클라이언트가 호출하는 함수.
+	virtual void OnRep_Owner() override;
+	virtual void PostNetInit() override;
+
 	virtual void SetDead() override;
 
 public:

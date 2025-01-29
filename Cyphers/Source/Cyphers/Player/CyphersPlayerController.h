@@ -20,8 +20,15 @@ public:
 	ACyphersPlayerController();
 	
 protected:
+	//액터를 초기화할 떄
+	//virtual void PostInitializeComponents() override;
+
+
+	//네트워크에서 초기화에 필요한 정보를 전달받은 것이 모두 마무리가 되면 호출
+	virtual void PostNetInit() override;
 	virtual void BeginPlay() override;
-	
+	virtual void OnPossess(APawn* InPawn) override;
+
 // HUD Section
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = HUD)

@@ -11,6 +11,7 @@
 #include "UI/CyphersHUDWidget.h"
 #include "CharacterStat/CyphersCharacterStatComponent.h"
 #include "Interface/CyphersGameInterface.h"
+#include "Cyphers.h"
 
 ACyphersCharacterPlayer::ACyphersCharacterPlayer()
 {
@@ -76,6 +77,56 @@ void ACyphersCharacterPlayer::BeginPlay()
 
 	SetCharacterControl(CurrentCharacterControlType);
 }
+
+
+
+void ACyphersCharacterPlayer::PossessedBy(AController* NewController)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("Begin"), *GetName());
+	AActor* OwnerActor = GetOwner();
+	if (OwnerActor)
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Owner : %s"), *OwnerActor->GetName());
+	}
+	else
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No Owner"));
+	}
+
+	Super::PossessedBy(NewController);
+
+	OwnerActor = GetOwner();
+	if (OwnerActor)
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Owner : %s"), *OwnerActor->GetName());
+	}
+	else
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No Owner"));
+	}
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("End"), *GetName());
+
+}
+
+void ACyphersCharacterPlayer::OnRep_Owner()
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("Begin"), *GetName());
+
+	Super::OnRep_Owner();
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("End"), *GetName());
+}
+
+void ACyphersCharacterPlayer::PostNetInit()
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("Begin"), *GetName());
+
+	Super::PostNetInit();
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+}
+
 
 void ACyphersCharacterPlayer::SetDead()
 {

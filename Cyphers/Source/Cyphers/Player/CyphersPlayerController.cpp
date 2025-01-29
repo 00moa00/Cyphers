@@ -18,18 +18,31 @@ ACyphersPlayerController::ACyphersPlayerController()
 	}
 }
 
+
+void ACyphersPlayerController::PostNetInit()
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("Begin"), *GetName());
+
+	Super::PostNetInit();
+
+	UNetDriver* NetDriver = GetNetDriver();
+	if (NetDriver)
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Server Connection : %s"), *NetDriver->ServerConnection->GetName());
+	}
+	else
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No NetDriver"));
+	}
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+}
+
+
 void ACyphersPlayerController::BeginPlay()
 {
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
-	//AGameModeBase* GameMode = GetWorld()->GetAuthGameMode();
-	//if (GameMode)
-	//{
-	//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("GameMode : %s"), *GameMode->GetName());
-	//}
-	//else
-	//{
-	//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("GameMode : %s"), TEXT("nullptr"));
-	//}
+
 
 	Super::BeginPlay();
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
@@ -37,3 +50,14 @@ void ACyphersPlayerController::BeginPlay()
 	FInputModeGameOnly GameOnlyInputMode;
 	SetInputMode(GameOnlyInputMode);
 }
+
+
+void ACyphersPlayerController::OnPossess(APawn* InPawn)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("Begin"), *GetName());
+
+	Super::OnPossess(InPawn);
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+}
+

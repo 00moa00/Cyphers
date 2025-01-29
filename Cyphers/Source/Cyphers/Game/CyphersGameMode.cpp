@@ -54,6 +54,22 @@ void ACyphersGameMode::PostLogin(APlayerController* NewPlayer)
 
 	Super::PostLogin(NewPlayer);
 
+
+	UNetDriver* NetDriver = GetNetDriver();
+	if (NetDriver)
+	{
+		for (const auto& Connection : NetDriver->ClientConnections)
+		{
+			Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Client Connections : %s"), *Connection->GetName());
+		}
+	}
+	else
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No NetDriver"));
+	}
+
+
+
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
 
 }
