@@ -5,6 +5,7 @@
 #include "UI/CyphersHUDWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "CyphersSaveGame.h"
+#include "Cyphers.h"
 
 DEFINE_LOG_CATEGORY(LogCyphersPlayerController);
 
@@ -19,7 +20,19 @@ ACyphersPlayerController::ACyphersPlayerController()
 
 void ACyphersPlayerController::BeginPlay()
 {
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	//AGameModeBase* GameMode = GetWorld()->GetAuthGameMode();
+	//if (GameMode)
+	//{
+	//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("GameMode : %s"), *GameMode->GetName());
+	//}
+	//else
+	//{
+	//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("GameMode : %s"), TEXT("nullptr"));
+	//}
+
 	Super::BeginPlay();
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
 
 	FInputModeGameOnly GameOnlyInputMode;
 	SetInputMode(GameOnlyInputMode);
