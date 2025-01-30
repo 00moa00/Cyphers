@@ -39,7 +39,7 @@ public:
 	// Connection에 대해서 번치 정보를 해석해서 내가 어떤 작업, 어떤 리플리케이션을 작업해야하는지 명령을 받아서 수행하는 역할을 한다.
 
 	virtual void OnActorChannelOpen(class FInBunch& InBunch, class UNetConnection* Connection) override;
-
+	virtual bool IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const override;
 
 	//ReplicatedUsing 속성이 복제될 때, 클라이언트에 콜백 함수가 호출되도록
 	UPROPERTY(ReplicatedUsing = OnRep_ServerRotationYaw)
@@ -53,4 +53,9 @@ public:
 
 	float RotationRate = 30.0f;
 
+	//현재 서버로부터 전의 패킷을 받은 이후에 시간 누적
+	float ClientTimeSinceUpdate = 0.0f;
+
+	//다음 패킷이 받아질 것으로 예상되는 시간
+	float ClientTimeBetweenLastUpdate = 0.0f;
 };

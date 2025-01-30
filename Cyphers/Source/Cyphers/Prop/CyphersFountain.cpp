@@ -33,6 +33,8 @@ ACyphersFountain::ACyphersFountain()
 	}
 
 	bReplicates = true;
+	NetUpdateFrequency = 1.0f; //1초에 몇 번 서버가 클라이언트에게 업데이트를 보내는지
+	NetCullDistanceSquared = 4000000.0f;
 
 }
 
@@ -60,6 +62,27 @@ void ACyphersFountain::Tick(float DeltaTime)
 		//FRotator NewRotator = RootComponent->GetComponentRotation();
 		//NewRotator.Yaw = ServerRotationYaw;
 		//RootComponent->SetWorldRotation(NewRotator);
+
+		// ***지난 패킷에 전송된 시간을 기준으로 앞으로 진행될 회전 값의 예측치를 구한다. ***
+
+		//현재 서버로부터 패킷을 받은 이후에 시간들을 누적
+		ClientTimeSinceUpdate += DeltaTime;
+
+		//값이 너무 작다면 리턴
+		if (ClientTimeBetweenLastUpdate < KINDA_SMALL_NUMBER)
+		{
+			return;
+		}
+
+		//보간
+		const float EstimateRotationYaw = ServerRotationYaw + RotationRate * ClientTimeBetweenLastUpdate;
+		const float LerpRatio = ClientTimeSinceUpdate / ClientTimeBetweenLastUpdate;
+
+		FRotator ClientRotator = RootComponent->GetComponentRotation();
+		const float ClientNewYaw = FMath::Lerp(ServerRotationYaw, EstimateRotationYaw, LerpRatio);
+
+		ClientRotator.Yaw = ClientNewYaw;
+		RootComponent->SetWorldRotation(ClientRotator);
 	}
 }
 
@@ -80,6 +103,18 @@ void ACyphersFountain::OnActorChannelOpen(FInBunch& InBunch, UNetConnection* Con
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
+bool ACyphersFountain::IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const
+{
+	bool NetRelevantResult = Super::IsNetRelevantFor(RealViewer, ViewTarget, SrcLocation);
+	if (!NetRelevantResult)
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Not Relevant:[%s] %s"), *RealViewer->GetName(), *SrcLocation.ToCompactString());
+	}
+
+	return NetRelevantResult;
+}
+
+
 void ACyphersFountain::OnRep_ServerRotationYaw()
 {
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Yaw : %f"), ServerRotationYaw);
@@ -87,5 +122,9 @@ void ACyphersFountain::OnRep_ServerRotationYaw()
 	FRotator NewRotator = RootComponent->GetComponentRotation();
 	NewRotator.Yaw = ServerRotationYaw;
 	RootComponent->SetWorldRotation(NewRotator);
+
+	//경과된 값으로 업데이트한다.
+	ClientTimeBetweenLastUpdate = ClientTimeSinceUpdate;
+	ClientTimeSinceUpdate = 0.0f;
 }
 
