@@ -1,0 +1,1 @@
+UnrealEditor.exe %cd%\Cyphers.uproject -NetTrace=1 -Trace=Net
