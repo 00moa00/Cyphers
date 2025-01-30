@@ -39,6 +39,8 @@ public:
 	// Connection에 대해서 번치 정보를 해석해서 내가 어떤 작업, 어떤 리플리케이션을 작업해야하는지 명령을 받아서 수행하는 역할을 한다.
 
 	virtual void OnActorChannelOpen(class FInBunch& InBunch, class UNetConnection* Connection) override;
+
+	//특정 액터(Actor)가 특정 플레이어(클라이언트)에게 네트워크적으로 "관련 있는지(Relevant)"를 결정하는 함수
 	virtual bool IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const override;
 
 	//ReplicatedUsing 속성이 복제될 때, 클라이언트에 콜백 함수가 호출되도록

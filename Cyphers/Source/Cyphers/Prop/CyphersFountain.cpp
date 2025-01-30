@@ -34,7 +34,7 @@ ACyphersFountain::ACyphersFountain()
 
 	bReplicates = true;
 	NetUpdateFrequency = 1.0f; //1초에 몇 번 서버가 클라이언트에게 업데이트를 보내는지
-	NetCullDistanceSquared = 4000000.0f;
+	NetCullDistanceSquared = 4000000.0f;	//연관성을 검사할 거리. 2000의 제곱. 100 = 1m니깐 20m.
 
 }
 
@@ -106,7 +106,9 @@ void ACyphersFountain::OnActorChannelOpen(FInBunch& InBunch, UNetConnection* Con
 bool ACyphersFountain::IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const
 {
 	bool NetRelevantResult = Super::IsNetRelevantFor(RealViewer, ViewTarget, SrcLocation);
-	if (!NetRelevantResult)
+
+	//연관성 검사 실패했을 떄
+	if (NetRelevantResult == false)
 	{
 		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Not Relevant:[%s] %s"), *RealViewer->GetName(), *SrcLocation.ToCompactString());
 	}
