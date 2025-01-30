@@ -43,15 +43,25 @@ public:
 	//특정 액터(Actor)가 특정 플레이어(클라이언트)에게 네트워크적으로 "관련 있는지(Relevant)"를 결정하는 함수
 	virtual bool IsNetRelevantFor(const AActor* RealViewer, const AActor* ViewTarget, const FVector& SrcLocation) const override;
 
+	virtual void PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker) override;
+
 	//ReplicatedUsing 속성이 복제될 때, 클라이언트에 콜백 함수가 호출되도록
 	UPROPERTY(ReplicatedUsing = OnRep_ServerRotationYaw)
 	float ServerRotationYaw;
+
+
+	UPROPERTY(ReplicatedUsing = OnRep_ServerLightColor)
+	FLinearColor ServerLightColor;
 
 	//콜백함수는 UFUNCTION을 붙여줘야한다.
 	//OnRep < 접두사 필요
 	//서버가 아닌 클라이언트에서만 호출된다.
 	UFUNCTION()
 	void OnRep_ServerRotationYaw();
+
+	UFUNCTION()
+	void OnRep_ServerLightColor();
+
 
 	float RotationRate = 30.0f;
 

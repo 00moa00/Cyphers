@@ -2,7 +2,10 @@
 
 
 #include "Prop/CyphersFountain.h"
+
 #include "Components/StaticMeshComponent.h"
+#include "Components/PointLightComponent.h"
+
 #include "Net/UnrealNetwork.h"
 #include "Cyphers.h"
 
@@ -35,14 +38,35 @@ ACyphersFountain::ACyphersFountain()
 	bReplicates = true;
 	NetUpdateFrequency = 1.0f; //1초에 몇 번 서버가 클라이언트에게 업데이트를 보내는지
 	NetCullDistanceSquared = 4000000.0f;	//연관성을 검사할 거리. 2000의 제곱. 100 = 1m니깐 20m.
-
+	//NetDormancy = DORM_Initial;			//휴면 상태
 }
 
 // Called when the game starts or when spawned
 void ACyphersFountain::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	if (HasAuthority())
+	{
+		FTimerHandle Handle;
+		GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
+			{
+
+				ServerLightColor = FLinearColor(FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), 1.0f);
+				OnRep_ServerLightColor();
+			}
+		), 1.0f, true, 0.0f);
+
+
+		//휴먼상태 테스트 코드
+		FTimerHandle Handle2;
+		GetWorld()->GetTimerManager().SetTimer(Handle2, FTimerDelegate::CreateLambda([&]
+			{
+				//휴먼 상태 해제
+				//FlushNetDormancy();
+			}
+		), 10.0f, false, -1.0f);
+	}
 }
 
 // Called every frame
@@ -92,6 +116,9 @@ void ACyphersFountain::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& Out
 
 	//복제할 변수를 등록
 	DOREPLIFETIME(ACyphersFountain, ServerRotationYaw);
+	//DOREPLIFETIME(ACyphersFountain, ServerLightColor, COND_InitialOnly); //COND_InitialOnly : 최초로 한번 만 전송받는다.
+	DOREPLIFETIME(ACyphersFountain, ServerLightColor);
+
 }
 
 void ACyphersFountain::OnActorChannelOpen(FInBunch& InBunch, UNetConnection* Connection)
@@ -116,6 +143,12 @@ bool ACyphersFountain::IsNetRelevantFor(const AActor* RealViewer, const AActor* 
 	return NetRelevantResult;
 }
 
+void ACyphersFountain::PreReplication(IRepChangedPropertyTracker& ChangedPropertyTracker)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	Super::PreReplication(ChangedPropertyTracker);
+}
+
 
 void ACyphersFountain::OnRep_ServerRotationYaw()
 {
@@ -128,5 +161,21 @@ void ACyphersFountain::OnRep_ServerRotationYaw()
 	//경과된 값으로 업데이트한다.
 	ClientTimeBetweenLastUpdate = ClientTimeSinceUpdate;
 	ClientTimeSinceUpdate = 0.0f;
+}
+
+
+
+void ACyphersFountain::OnRep_ServerLightColor()
+{
+	if (!HasAuthority())
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("LightColor : %s"), *ServerLightColor.ToString());
+	}
+
+	UPointLightComponent* PointLight = Cast<UPointLightComponent>(GetComponentByClass(UPointLightComponent::StaticClass()));
+	if (PointLight)
+	{
+		PointLight->SetLightColor(ServerLightColor);
+	}
 }
 
