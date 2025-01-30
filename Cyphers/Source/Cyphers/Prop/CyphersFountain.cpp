@@ -3,6 +3,9 @@
 
 #include "Prop/CyphersFountain.h"
 #include "Components/StaticMeshComponent.h"
+#include "Net/UnrealNetwork.h"
+#include "Cyphers.h"
+
 
 // Sets default values
 ACyphersFountain::ACyphersFountain()
@@ -28,6 +31,9 @@ ACyphersFountain::ACyphersFountain()
 	{
 		Water->SetStaticMesh(WaterMeshRef.Object);
 	}
+
+	bReplicates = true;
+
 }
 
 // Called when the game starts or when spawned
@@ -42,5 +48,44 @@ void ACyphersFountain::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	//서버에서 주도적으로 변경해야하기 떄문에 클라와 서버 코드를 분리
+	if (HasAuthority())
+	{
+		AddActorLocalRotation(FRotator(0.0f, RotationRate * DeltaTime, 0.0f));
+		ServerRotationYaw = RootComponent->GetComponentRotation().Yaw;
+	}
+	else
+	{
+		//서버에서 받은 yaw값을 반영
+		//FRotator NewRotator = RootComponent->GetComponentRotation();
+		//NewRotator.Yaw = ServerRotationYaw;
+		//RootComponent->SetWorldRotation(NewRotator);
+	}
+}
+
+void ACyphersFountain::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//복제할 변수를 등록
+	DOREPLIFETIME(ACyphersFountain, ServerRotationYaw);
+}
+
+void ACyphersFountain::OnActorChannelOpen(FInBunch& InBunch, UNetConnection* Connection)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+	Super::OnActorChannelOpen(InBunch, Connection);
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+}
+
+void ACyphersFountain::OnRep_ServerRotationYaw()
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Yaw : %f"), ServerRotationYaw);
+
+	FRotator NewRotator = RootComponent->GetComponentRotation();
+	NewRotator.Yaw = ServerRotationYaw;
+	RootComponent->SetWorldRotation(NewRotator);
 }
 
