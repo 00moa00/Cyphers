@@ -8,7 +8,7 @@
 
 #include "Net/UnrealNetwork.h"
 #include "Cyphers.h"
-
+#include "EngineUtils.h"
 
 // Sets default values
 ACyphersFountain::ACyphersFountain()
@@ -46,26 +46,74 @@ void ACyphersFountain::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//서버일 때
 	if (HasAuthority())
 	{
 		FTimerHandle Handle;
 		GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
 			{
 
-				ServerLightColor = FLinearColor(FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), 1.0f);
-				OnRep_ServerLightColor();
+				//ServerLightColor = FLinearColor(FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), 1.0f);
+				//OnRep_ServerLightColor();
+
+
+
+				const FLinearColor NewLightColor = FLinearColor(FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), 1.0f);
+				MulticastRPCChangeLightColor(NewLightColor);
+				//ClientRPCChangeLightColor(NewLightColor);
 			}
 		), 1.0f, true, 0.0f);
 
 
-		//휴먼상태 테스트 코드
 		FTimerHandle Handle2;
 		GetWorld()->GetTimerManager().SetTimer(Handle2, FTimerDelegate::CreateLambda([&]
 			{
+				//휴먼상태 테스트 코드
 				//휴먼 상태 해제
 				//FlushNetDormancy();
+
+				//타이머에서 클라이언트 오너를 설정하는 이유 : 
+				//서버에 해당 클라이언트 1번에 대한 플레이어 컨트롤러가 만들어질 떄까지 시간적 여유를 주주기 위함.
+
+				//for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+				//{
+				//	APlayerController* PlayerController = Iterator->Get();
+				//	if (PlayerController && !PlayerController->IsLocalPlayerController())
+				//	{
+				//		SetOwner(PlayerController);
+				//		break;
+				//	}
+				//}
+				for (APlayerController* PlayerController : TActorRange<APlayerController>(GetWorld()))
+				{
+
+					//서버입장에서는 로컬 플레이어 컨트롤러가 아닌 컨트롤러가, 
+					// 클라이언트에 접속한 플레이어 컨트롤러이다.
+					if (PlayerController && PlayerController->IsLocalPlayerController()== false)
+					{
+						SetOwner(PlayerController);
+						break;
+					}
+				}
 			}
 		), 10.0f, false, -1.0f);
+	}
+
+	//클라일 때
+	else
+	{
+		//클라이언트는 프록시이기 때문에
+		//클라이언트에 오너를 직접 설정하는 건 사실상 별 의미가 없다.
+		//네트워크를 진행할 때 서버에 있는 액터의 오너가 설정되어야 되기 때문이다.  
+		//그래서 이 코드는 클라이언트의 로컬에서만 호출 되는, 네트워크가 없는 로컬 함수를 호출하게 되는거다.
+
+		//SetOwner(GetWorld()->GetFirstPlayerController());
+		//FTimerHandle Handle;
+		//GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
+		//	{
+		//		ServerRPCChangeLightColor();
+		//	}
+		//), 1.0f, true, 0.0f);
 	}
 }
 
@@ -149,6 +197,42 @@ void ACyphersFountain::PreReplication(IRepChangedPropertyTracker& ChangedPropert
 	Super::PreReplication(ChangedPropertyTracker);
 }
 
+void ACyphersFountain::MulticastRPCChangeLightColor_Implementation(const FLinearColor& NewLightColor)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("LightColor : %s"), *NewLightColor.ToString());
+
+	UPointLightComponent* PointLight = Cast<UPointLightComponent>(GetComponentByClass(UPointLightComponent::StaticClass()));
+	if (PointLight)
+	{
+		PointLight->SetLightColor(NewLightColor);
+	}
+}
+
+
+void ACyphersFountain::ClientRPCChangeLightColor_Implementation(const FLinearColor& NewLightColor)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("LightColor : %s"), *NewLightColor.ToString());
+
+	UPointLightComponent* PointLight = Cast<UPointLightComponent>(GetComponentByClass(UPointLightComponent::StaticClass()));
+	if (PointLight)
+	{
+		PointLight->SetLightColor(NewLightColor);
+	}
+}
+
+//유효성 검사
+bool ACyphersFountain::ServerRPCChangeLightColor_Validate()
+{
+
+	return true;
+}
+
+void ACyphersFountain::ServerRPCChangeLightColor_Implementation()
+{
+	const FLinearColor NewLightColor = FLinearColor(FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), FMath::RandRange(0.0f, 1.0f), 1.0f);
+	MulticastRPCChangeLightColor(NewLightColor);
+}
+
 
 void ACyphersFountain::OnRep_ServerRotationYaw()
 {
@@ -178,4 +262,3 @@ void ACyphersFountain::OnRep_ServerLightColor()
 		PointLight->SetLightColor(ServerLightColor);
 	}
 }
-
