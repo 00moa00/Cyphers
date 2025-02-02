@@ -12,6 +12,11 @@
 #include "CharacterStat/CyphersCharacterStatComponent.h"
 #include "Interface/CyphersGameInterface.h"
 #include "Cyphers.h"
+#include "Components/CapsuleComponent.h"
+#include "Physics/CyphersCollision.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "Engine/DamageEvents.h"
+#include "Net/UnrealNetwork.h"
 
 ACyphersCharacterPlayer::ACyphersCharacterPlayer()
 {
@@ -63,6 +68,8 @@ ACyphersCharacterPlayer::ACyphersCharacterPlayer()
 	}
 
 	CurrentCharacterControlType = ECharacterControlType::Quater;
+	bCanAttack = true;
+
 }
 
 void ACyphersCharacterPlayer::BeginPlay()
@@ -249,9 +256,110 @@ void ACyphersCharacterPlayer::QuaterMove(const FInputActionValue& Value)
 	AddMovementInput(MoveDirection, MovementVectorSize);
 }
 
+void ACyphersCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(ACyphersCharacterPlayer, bCanAttack);
+}
+
+
+
 void ACyphersCharacterPlayer::Attack()
 {
-	ProcessComboCommand();
+	//ProcessComboCommand();
+
+	//DOREPLIFETIME(ACyphersCharacterPlayer, bCanAttack);
+
+	if (bCanAttack)
+	{
+		ServerRPCAttack();
+	}
+}
+
+void ACyphersCharacterPlayer::AttackHitCheck()
+{
+	if (HasAuthority())
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+		FHitResult OutHitResult;
+		FCollisionQueryParams Params(SCENE_QUERY_STAT(Attack), false, this);
+
+		const float AttackRange = Stat->GetTotalStat().AttackRange;
+		const float AttackRadius = Stat->GetAttackRadius();
+		const float AttackDamage = Stat->GetTotalStat().Attack;
+		const FVector Start = GetActorLocation() + GetActorForwardVector() * GetCapsuleComponent()->GetScaledCapsuleRadius();
+		const FVector End = Start + GetActorForwardVector() * AttackRange;
+
+		bool HitDetected = GetWorld()->SweepSingleByChannel(OutHitResult, Start, End, FQuat::Identity, CCHANNEL_CyphersACTION, FCollisionShape::MakeSphere(AttackRadius), Params);
+		if (HitDetected)
+		{
+			FDamageEvent DamageEvent;
+			OutHitResult.GetActor()->TakeDamage(AttackDamage, DamageEvent, GetController(), this);
+		}
+
+#if ENABLE_DRAW_DEBUG
+
+		FVector CapsuleOrigin = Start + (End - Start) * 0.5f;
+		float CapsuleHalfHeight = AttackRange * 0.5f;
+		FColor DrawColor = HitDetected ? FColor::Green : FColor::Red;
+
+		DrawDebugCapsule(GetWorld(), CapsuleOrigin, CapsuleHalfHeight, AttackRadius, FRotationMatrix::MakeFromZ(GetActorForwardVector()).ToQuat(), DrawColor, false, 5.0f);
+
+#endif
+	}
+}
+
+
+bool ACyphersCharacterPlayer::ServerRPCAttack_Validate()
+{
+	return true;
+}
+
+void ACyphersCharacterPlayer::ServerRPCAttack_Implementation()
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	MulticastRPCAttack();
+}
+
+void ACyphersCharacterPlayer::MulticastRPCAttack_Implementation()
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+	//서버
+	if (HasAuthority())
+	{
+		bCanAttack = false;
+
+		//클라이언트에서만 호출이 되어서, 서버에서는 자동으로 호출되지 않기 때문에
+		//서버 로직의 경우 이 함수를 명시적으로 호출해야 한다.
+		OnRep_CanAttack();
+
+		FTimerHandle Handle;
+		GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
+			{
+				bCanAttack = true;
+				OnRep_CanAttack();
+			}
+		), AttackTime, false, -1.0f);
+
+	}
+
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	AnimInstance->Montage_Play(ComboActionMontage);
+}
+
+void ACyphersCharacterPlayer::OnRep_CanAttack()
+{
+	if (!bCanAttack)
+	{
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+	}
+	else
+	{
+		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	}
 }
 
 void ACyphersCharacterPlayer::SetupHUDWidget(UCyphersHUDWidget* InHUDWidget)

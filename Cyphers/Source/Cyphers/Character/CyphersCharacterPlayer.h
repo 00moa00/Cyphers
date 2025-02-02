@@ -78,7 +78,28 @@ protected:
 
 	ECharacterControlType CurrentCharacterControlType;
 
+protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void Attack();
+	virtual void AttackHitCheck() override;
+
+
+	//클라이언트에서 서버로 보내는 함수
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPCAttack();
+
+	//모든 클라이언트에 보내는 함수
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastRPCAttack();
+
+	UPROPERTY(ReplicatedUsing = OnRep_CanAttack)
+	uint8 bCanAttack : 1;
+
+	UFUNCTION()
+	void OnRep_CanAttack();
+
+	//공격 시간
+	float AttackTime = 1.4667f;
 
 // UI Section
 protected:

@@ -3,7 +3,8 @@
 
 #include "CharacterStat/CyphersCharacterStatComponent.h"
 #include "GameData/CyphersGameSingleton.h"
-
+#include "Cyphers.h"
+#include "Net/UnrealNetwork.h"
 // Sets default values for this component's properties
 UCyphersCharacterStatComponent::UCyphersCharacterStatComponent()
 {
@@ -11,6 +12,11 @@ UCyphersCharacterStatComponent::UCyphersCharacterStatComponent()
 	AttackRadius = 50.0f;
 
 	bWantsInitializeComponent = true;
+
+
+	//이제부터 이 액터 컴포넌트는 네트워크로 리플리케이션 될 준비가 되어있다
+	SetIsReplicated(true);
+
 }
 
 void UCyphersCharacterStatComponent::InitializeComponent()
@@ -49,3 +55,33 @@ void UCyphersCharacterStatComponent::SetHp(float NewHp)
 	OnHpChanged.Broadcast(CurrentHp);
 }
 
+void UCyphersCharacterStatComponent::BeginPlay()
+{
+	Cyphers_SUBLOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	Super::BeginPlay();
+}
+
+void UCyphersCharacterStatComponent::ReadyForReplication()
+{
+	Cyphers_SUBLOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	Super::ReadyForReplication();
+}
+
+void UCyphersCharacterStatComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(UCyphersCharacterStatComponent, CurrentHp);
+}
+
+void UCyphersCharacterStatComponent::OnRep_CurrentHp()
+{
+
+	//값이 변경이 되면 해당 함수가 클라이언트에 호출이 된다. 
+	Cyphers_SUBLOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	OnHpChanged.Broadcast(CurrentHp);
+	if (CurrentHp <= KINDA_SMALL_NUMBER)
+	{
+		OnHpZero.Broadcast();
+	}
+}
