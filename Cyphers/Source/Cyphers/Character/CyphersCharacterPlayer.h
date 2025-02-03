@@ -81,16 +81,36 @@ protected:
 protected:
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 	void Attack();
+	void PlayAttackAnimation();
 	virtual void AttackHitCheck() override;
+	void AttackHitConfirm(AActor* HitActor);
+	void DrawDebugAttackRange(const FColor& DrawColor, FVector TraceStart, FVector TraceEnd, FVector Forward);
+
 
 
 	//클라이언트에서 서버로 보내는 함수
 	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerRPCAttack();
+	void ServerRPCAttack(float AttackStartTime);
 
 	//모든 클라이언트에 보내는 함수
-	UFUNCTION(NetMulticast, Reliable)
+	//Unreliable : 게임과 무관한 효과를 재생하는데 효과적
+	UFUNCTION(NetMulticast, Unreliable)
 	void MulticastRPCAttack();
+
+
+	UFUNCTION(Client, Unreliable)
+	void ClientRPCPlayAnimation(ACyphersCharacterPlayer* CharacterToPlay);
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPCNotifyHit(const FHitResult& HitResult, float HitCheckTime);
+
+
+	//FVector_NetQuantize : 정밀도를 변환해서 데이터의 크기를 낮춤 12 바이트 -> 6바이트. 각 축 4바이트 -> 2바이트.
+	//FVector_NetQuantizeNormal : 각 축 1바이트. 총 4바이트
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRPCNotifyMiss(FVector_NetQuantize TraceStart, FVector_NetQuantize TraceEnd, FVector_NetQuantizeNormal TraceDir, float HitCheckTime);
+
 
 	UPROPERTY(ReplicatedUsing = OnRep_CanAttack)
 	uint8 bCanAttack : 1;
@@ -100,6 +120,16 @@ protected:
 
 	//공격 시간
 	float AttackTime = 1.4667f;
+	float LastAttackStartTime = 0.0f;
+	float AttackTimeDifference = 0.0f;
+
+	//판정 검증을 위한 거리
+	//두 캐리겉의 거리가 3m이내면 문제가 없다라고 판정하기 위해 300.
+	float AcceptCheckDistance = 300.0f;
+
+	//최소한 이 시간은 지난 후에 판정을 진행한다.
+	float AcceptMinCheckTime = 0.15f;
+
 
 // UI Section
 protected:

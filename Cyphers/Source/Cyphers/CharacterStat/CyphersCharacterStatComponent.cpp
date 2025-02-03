@@ -15,7 +15,7 @@ UCyphersCharacterStatComponent::UCyphersCharacterStatComponent()
 
 
 	//이제부터 이 액터 컴포넌트는 네트워크로 리플리케이션 될 준비가 되어있다
-	SetIsReplicated(true);
+	SetIsReplicatedByDefault(true);
 
 }
 

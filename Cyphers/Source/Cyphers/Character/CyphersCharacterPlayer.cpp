@@ -17,6 +17,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Engine/DamageEvents.h"
 #include "Net/UnrealNetwork.h"
+#include "GameFramework/GameStateBase.h"
+#include "EngineUtils.h"
 
 ACyphersCharacterPlayer::ACyphersCharacterPlayer()
 {
@@ -90,6 +92,7 @@ void ACyphersCharacterPlayer::BeginPlay()
 void ACyphersCharacterPlayer::PossessedBy(AController* NewController)
 {
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("Begin"), *GetName());
+
 	AActor* OwnerActor = GetOwner();
 	if (OwnerActor)
 	{
@@ -122,7 +125,17 @@ void ACyphersCharacterPlayer::OnRep_Owner()
 
 	Super::OnRep_Owner();
 
-	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("End"), *GetName());
+	AActor* OwnerActor = GetOwner();
+	if (OwnerActor)
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Owner : %s"), *OwnerActor->GetName());
+	}
+	else
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No Owner"));
+	}
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
 void ACyphersCharacterPlayer::PostNetInit()
@@ -134,17 +147,6 @@ void ACyphersCharacterPlayer::PostNetInit()
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
-
-void ACyphersCharacterPlayer::SetDead()
-{
-	Super::SetDead();
-
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController)
-	{
-		DisableInput(PlayerController);
-	}
-}
 
 void ACyphersCharacterPlayer::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
@@ -256,6 +258,19 @@ void ACyphersCharacterPlayer::QuaterMove(const FInputActionValue& Value)
 	AddMovementInput(MoveDirection, MovementVectorSize);
 }
 
+
+void ACyphersCharacterPlayer::SetDead()
+{
+	Super::SetDead();
+
+	APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	if (PlayerController)
+	{
+		DisableInput(PlayerController);
+	}
+}
+
+
 void ACyphersCharacterPlayer::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -271,15 +286,67 @@ void ACyphersCharacterPlayer::Attack()
 
 	//DOREPLIFETIME(ACyphersCharacterPlayer, bCanAttack);
 
+	//서버RPC를 호출해서 MulticastRPCAttack를 호출함
+	// MulticastRPCAttack에서 몽타주를 재생을 명령한다
+	//if (bCanAttack)
+	//{
+	//	ServerRPCAttack();
+	//}
+
+	//공격 입력을 받자마자 호출없이 클라이언트가 바로 모션이 재생되도록 함
 	if (bCanAttack)
 	{
-		ServerRPCAttack();
+		//클라이언트는 바로 모션을 재생한다.
+		if (!HasAuthority())
+		{
+			bCanAttack = false;
+			GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
+
+			FTimerHandle Handle;
+			GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
+				{
+					bCanAttack = true;
+					GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+				}
+			), AttackTime, false, -1.0f);
+
+			PlayAttackAnimation();
+		}
+
+		//현재 내가 공격을 한 시간에 대한 정보를 서버에 보낸다.
+		//이 떄, 서버의 월드와 클라이언트의 월드는 서로 다른 월드이다.
+		//클라이언트의 월드는 서버를 시뮬레이션한 월드이고, 클라이언트는 서버보다 늦게 생성되기 때문에 
+		//일치하지 않고, 클라이언트 시간이 서버의 시간보다 늦게 흘러갈 수 밖에 없다.
+		//그래서 서버의 시간을 가져와 넘겨줘야 서버에서 보고 안전하게 판단할 수 있다. 
+
+		//그런데, 서버의 경우에는 공격 시간이 클라이언트와의 차이가 있기때문에
+		//클라이언트로부터 패킷을 받은 시간과의 차이가 존재한다.
+		//그래서 그 차이를 계산해서 타이머를 완료해줘야 한다.
+		ServerRPCAttack(GetWorld()->GetGameState()->GetServerWorldTimeSeconds());
 	}
 }
 
+void ACyphersCharacterPlayer::PlayAttackAnimation()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	AnimInstance->StopAllMontages(0.0f);
+	AnimInstance->Montage_Play(ComboActionMontage);
+}
+
+
+void ACyphersCharacterPlayer::ClientRPCPlayAnimation_Implementation(ACyphersCharacterPlayer* CharacterToPlay)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	if (CharacterToPlay)
+	{
+		CharacterToPlay->PlayAttackAnimation();
+	}
+}
+
+
 void ACyphersCharacterPlayer::AttackHitCheck()
 {
-	if (HasAuthority())
+	if (IsLocallyControlled())
 	{
 		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
 
@@ -289,66 +356,225 @@ void ACyphersCharacterPlayer::AttackHitCheck()
 		const float AttackRange = Stat->GetTotalStat().AttackRange;
 		const float AttackRadius = Stat->GetAttackRadius();
 		const float AttackDamage = Stat->GetTotalStat().Attack;
-		const FVector Start = GetActorLocation() + GetActorForwardVector() * GetCapsuleComponent()->GetScaledCapsuleRadius();
+		const FVector Forward = GetActorForwardVector();
+		const FVector Start = GetActorLocation() + Forward * GetCapsuleComponent()->GetScaledCapsuleRadius();
 		const FVector End = Start + GetActorForwardVector() * AttackRange;
 
 		bool HitDetected = GetWorld()->SweepSingleByChannel(OutHitResult, Start, End, FQuat::Identity, CCHANNEL_CyphersACTION, FCollisionShape::MakeSphere(AttackRadius), Params);
-		if (HitDetected)
+
+		float HitCheckTime = GetWorld()->GetGameState()->GetServerWorldTimeSeconds();
+
+		//클라이언트에서 판정하는 경우는 서버쪽에 결과를 보내야 한다.
+		if (!HasAuthority())
 		{
-			FDamageEvent DamageEvent;
-			OutHitResult.GetActor()->TakeDamage(AttackDamage, DamageEvent, GetController(), this);
+			if (HitDetected)
+			{
+				//서버의 검증을 거치도록 함
+				ServerRPCNotifyHit(OutHitResult, HitCheckTime);
+			}
+			else
+			{
+				//서버의 검증을 거치도록 함
+				ServerRPCNotifyMiss(Start, End, Forward, HitCheckTime);
+			}
 		}
 
-#if ENABLE_DRAW_DEBUG
-
-		FVector CapsuleOrigin = Start + (End - Start) * 0.5f;
-		float CapsuleHalfHeight = AttackRange * 0.5f;
-		FColor DrawColor = HitDetected ? FColor::Green : FColor::Red;
-
-		DrawDebugCapsule(GetWorld(), CapsuleOrigin, CapsuleHalfHeight, AttackRadius, FRotationMatrix::MakeFromZ(GetActorForwardVector()).ToQuat(), DrawColor, false, 5.0f);
-
-#endif
+		//서버에서 판정하는 경우에는 패킷을 보내지 않고 바로 처리
+		else
+		{
+			FColor DebugColor = HitDetected ? FColor::Green : FColor::Red;
+			DrawDebugAttackRange(DebugColor, Start, End, Forward);
+			if (HitDetected)
+			{
+				AttackHitConfirm(OutHitResult.GetActor());
+			}
+		}
 	}
 }
 
 
-bool ACyphersCharacterPlayer::ServerRPCAttack_Validate()
-{
-	return true;
-}
-
-void ACyphersCharacterPlayer::ServerRPCAttack_Implementation()
+void ACyphersCharacterPlayer::AttackHitConfirm(AActor* HitActor)
 {
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
-	MulticastRPCAttack();
+
+	//서버에서 사용하는 함수
+	if (HasAuthority())
+	{
+		const float AttackDamage = Stat->GetTotalStat().Attack;
+		FDamageEvent DamageEvent;
+		HitActor->TakeDamage(AttackDamage, DamageEvent, GetController(), this);
+	}
 }
+
+void ACyphersCharacterPlayer::DrawDebugAttackRange(const FColor& DrawColor, FVector TraceStart, FVector TraceEnd, FVector Forward)
+{
+#if ENABLE_DRAW_DEBUG
+
+	const float AttackRange = Stat->GetTotalStat().AttackRange;
+	const float AttackRadius = Stat->GetAttackRadius();
+	FVector CapsuleOrigin = TraceStart + (TraceEnd - TraceStart) * 0.5f;
+	float CapsuleHalfHeight = AttackRange * 0.5f;
+	DrawDebugCapsule(GetWorld(), CapsuleOrigin, CapsuleHalfHeight, AttackRadius, FRotationMatrix::MakeFromZ(Forward).ToQuat(), DrawColor, false, 5.0f);
+
+#endif
+}
+
+bool ACyphersCharacterPlayer::ServerRPCAttack_Validate(float AttackStartTime)
+{
+	//검증 강화
+	if (LastAttackStartTime == 0.0f)
+	{
+		return true;
+	}
+
+	//마지막으로 공격한 시간과 현재 공격한 시간이 기본적으로 설정한 시간보다 작으면, 문제가 있을 것이다.
+	return (AttackStartTime - LastAttackStartTime) > AttackTime;
+}
+
+void ACyphersCharacterPlayer::ServerRPCAttack_Implementation(float AttackStartTime)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+	bCanAttack = false;
+	OnRep_CanAttack();
+
+	//AttackTimeDifference = 현재 시간 - 클라이언트로부터 받은 시간
+	AttackTimeDifference = GetWorld()->GetTimeSeconds() - AttackStartTime;
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("LagTime : %f"), AttackTimeDifference);
+
+	//안전하게clamp로 0부터 범위 제한
+	//- 0.01f : 기존의 AttackTime에서 받은 시간을 보간해서 타이머를 설정하는데, 보간한 값이 AttackTime보다 크면 타이머가 작동하지 않으니깐
+	//방어목적으로 0.01을 빼준다.
+
+	AttackTimeDifference = FMath::Clamp(AttackTimeDifference, 0.0f, AttackTime - 0.01f);
+
+	FTimerHandle Handle;
+	GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
+		{
+			bCanAttack = true;
+			OnRep_CanAttack();
+		}
+	), AttackTime - AttackTimeDifference, false, -1.0f);
+
+	//마지막으로 공격한 시간을 저장
+	LastAttackStartTime = AttackStartTime;
+
+	//공격 애니메이션 재생
+	PlayAttackAnimation();
+
+
+	//서버의 경우에는 이미 재생을 했기 때문에 중복이다. 
+	//MulticastRPCAttack();
+
+	//그래서 MulticastRPCAttack를 사용하지 않고 플레이어 컨트롤러 목록을 가져와서 하나씩 명령을 보낸다. 
+	for (APlayerController* PlayerController : TActorRange<APlayerController>(GetWorld()))
+	{
+		if (PlayerController && GetController() != PlayerController)
+		{
+			if (!PlayerController->IsLocalController())
+			{
+				ACyphersCharacterPlayer* OtherPlayer = Cast<ACyphersCharacterPlayer>(PlayerController->GetPawn());
+				if (OtherPlayer)
+				{
+					OtherPlayer->ClientRPCPlayAnimation(this);
+				}
+			}
+		}
+	}
+}
+
 
 void ACyphersCharacterPlayer::MulticastRPCAttack_Implementation()
 {
-	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
 
-	//서버
-	if (HasAuthority())
+	if (!IsLocallyControlled())
 	{
-		bCanAttack = false;
-
-		//클라이언트에서만 호출이 되어서, 서버에서는 자동으로 호출되지 않기 때문에
-		//서버 로직의 경우 이 함수를 명시적으로 호출해야 한다.
-		OnRep_CanAttack();
-
-		FTimerHandle Handle;
-		GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
-			{
-				bCanAttack = true;
-				OnRep_CanAttack();
-			}
-		), AttackTime, false, -1.0f);
-
+		PlayAttackAnimation();
 	}
 
-	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-	AnimInstance->Montage_Play(ComboActionMontage);
+
+	//이 모션을 뿌린 클라이언트는 이미 재생을 했고, 다른 클라에서는
+	//모션이 조금 부정확하게 재생되어도
+	//게임 플레이와는 지장이 크게 발생하지 않기 때문에
+	//Unrealiable로 해도 괜찮다. 
+
+
+	//Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+	////서버
+	//if (HasAuthority())
+	//{
+	//	bCanAttack = false;
+
+	//	//클라이언트에서만 호출이 되어서, 서버에서는 자동으로 호출되지 않기 때문에
+	//	//서버 로직의 경우 이 함수를 명시적으로 호출해야 한다.
+	//	OnRep_CanAttack();
+
+	//	FTimerHandle Handle;
+	//	GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
+	//		{
+	//			bCanAttack = true;
+	//			OnRep_CanAttack();
+	//		}
+	//	), AttackTime, false, -1.0f);
+
+	//}
+
+	//UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	//AnimInstance->Montage_Play(ComboActionMontage);
 }
+
+
+bool ACyphersCharacterPlayer::ServerRPCNotifyHit_Validate(const FHitResult& HitResult, float HitCheckTime)
+{
+	return (HitCheckTime - LastAttackStartTime) > AcceptMinCheckTime;
+}
+
+void ACyphersCharacterPlayer::ServerRPCNotifyHit_Implementation(const FHitResult& HitResult, float HitCheckTime)
+{
+	//클라이언트에서 받은 정보로 검증을 한다.
+	AActor* HitActor = HitResult.GetActor();
+	if (::IsValid(HitActor))
+	{
+		const FVector HitLocation = HitResult.Location;
+		const FBox HitBox = HitActor->GetComponentsBoundingBox();
+		const FVector ActorBoxCenter = (HitBox.Min + HitBox.Max) * 0.5f;
+	
+		//거리값으로 판정 
+		if (FVector::DistSquared(HitLocation, ActorBoxCenter) <= AcceptCheckDistance * AcceptCheckDistance)
+		{
+			AttackHitConfirm(HitActor);
+		}
+		else
+		{
+			Cyphers_LOG(LogCyphersNetwork, Warning, TEXT("%s"), TEXT("HitTest Rejected!"));
+		}
+
+#if ENABLE_DRAW_DEBUG
+		DrawDebugPoint(GetWorld(), ActorBoxCenter, 50.0f, FColor::Cyan, false, 5.0f);
+		DrawDebugPoint(GetWorld(), HitLocation, 50.0f, FColor::Magenta, false, 5.0f);
+#endif
+
+		DrawDebugAttackRange(FColor::Green, HitResult.TraceStart, HitResult.TraceEnd, HitActor->GetActorForwardVector());
+	}
+
+}
+
+bool ACyphersCharacterPlayer::ServerRPCNotifyMiss_Validate(FVector_NetQuantize TraceStart, FVector_NetQuantize TraceEnd, FVector_NetQuantizeNormal TraceDir, float HitCheckTime)
+{
+
+	//판정 시간과 스타트 타임을 뺐을 때 accept 타임보다 크면 공격 
+	return (HitCheckTime - LastAttackStartTime) > AcceptMinCheckTime;
+}
+
+
+void ACyphersCharacterPlayer::ServerRPCNotifyMiss_Implementation(FVector_NetQuantize TraceStart, FVector_NetQuantize TraceEnd, FVector_NetQuantizeNormal TraceDir, float HitCheckTime)
+{
+	DrawDebugAttackRange(FColor::Red, TraceStart, TraceEnd, TraceDir);
+}
+
+
 
 void ACyphersCharacterPlayer::OnRep_CanAttack()
 {
