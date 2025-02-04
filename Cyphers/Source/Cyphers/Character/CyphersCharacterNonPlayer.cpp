@@ -6,7 +6,8 @@
 #include "AI/CyphersAIController.h"
 #include "CharacterStat/CyphersCharacterStatComponent.h"
 
-ACyphersCharacterNonPlayer::ACyphersCharacterNonPlayer()
+ACyphersCharacterNonPlayer::ACyphersCharacterNonPlayer(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	GetMesh()->SetHiddenInGame(true);
 
@@ -14,7 +15,8 @@ ACyphersCharacterNonPlayer::ACyphersCharacterNonPlayer()
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 }
 
-void ACyphersCharacterNonPlayer::PostInitializeComponents()
+void ACyphersCharacterNonPlayer::PostInitializeComponents ()
+	
 {
 	Super::PostInitializeComponents();
 

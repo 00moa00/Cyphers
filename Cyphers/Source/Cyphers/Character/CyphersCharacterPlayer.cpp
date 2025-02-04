@@ -19,8 +19,11 @@
 #include "Net/UnrealNetwork.h"
 #include "GameFramework/GameStateBase.h"
 #include "EngineUtils.h"
+#include "CyCharacterMovementComponent.h"
 
-ACyphersCharacterPlayer::ACyphersCharacterPlayer()
+ACyphersCharacterPlayer::ACyphersCharacterPlayer(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer.SetDefaultSubobjectClass<UCyCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+
 {
 	// Camera
 	CameraBoom = CreateDefaultSubobject<USpringArmComponent>(TEXT("CameraBoom"));
@@ -68,6 +71,13 @@ ACyphersCharacterPlayer::ACyphersCharacterPlayer()
 	{
 		AttackAction = InputActionAttackRef.Object;
 	}
+
+	static ConstructorHelpers::FObjectFinder<UInputAction> InputActionTeleportRef(TEXT("/Script/EnhancedInput.InputAction'/Game/Cyphers/Input/Actions/IA_Teleport.IA_Teleport'"));
+	if (nullptr != InputActionTeleportRef.Object)
+	{
+		TeleportAction = InputActionTeleportRef.Object;
+	}
+
 
 	CurrentCharacterControlType = ECharacterControlType::Quater;
 	bCanAttack = true;
@@ -161,6 +171,8 @@ void ACyphersCharacterPlayer::SetupPlayerInputComponent(class UInputComponent* P
 	EnhancedInputComponent->BindAction(ShoulderLookAction, ETriggerEvent::Triggered, this, &ACyphersCharacterPlayer::ShoulderLook);
 	EnhancedInputComponent->BindAction(QuaterMoveAction, ETriggerEvent::Triggered, this, &ACyphersCharacterPlayer::QuaterMove);
 	EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ACyphersCharacterPlayer::Attack);
+	EnhancedInputComponent->BindAction(TeleportAction, ETriggerEvent::Triggered, this, &ACyphersCharacterPlayer::Teleport);
+
 }
 
 void ACyphersCharacterPlayer::ChangeCharacterControl()
@@ -611,5 +623,16 @@ void ACyphersCharacterPlayer::SetupHUDWidget(UCyphersHUDWidget* InHUDWidget)
 
 		Stat->OnStatChanged.AddUObject(InHUDWidget, &UCyphersHUDWidget::UpdateStat);
 		Stat->OnHpChanged.AddUObject(InHUDWidget, &UCyphersHUDWidget::UpdateHpBar);
+	}
+}
+
+void ACyphersCharacterPlayer::Teleport()
+{
+	Cyphers_LOG(LogCyphersTeleport, Log, TEXT("%s"), TEXT("Begin"));
+
+	UCyCharacterMovementComponent* CyMovement = Cast<UCyCharacterMovementComponent>(GetCharacterMovement());
+	if (CyMovement)
+	{
+		CyMovement->SetTeleportCommand();
 	}
 }

@@ -17,7 +17,7 @@ class CYPHERS_API ACyphersCharacterNonPlayer : public ACyphersCharacterBase, pub
 	GENERATED_BODY()
 	
 public:
-	ACyphersCharacterNonPlayer();
+	ACyphersCharacterNonPlayer(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void PostInitializeComponents() override;

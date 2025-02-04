@@ -17,7 +17,7 @@ class CYPHERS_API ACyphersCharacterPlayer : public ACyphersCharacterBase, public
 	GENERATED_BODY()
 	
 public:
-	ACyphersCharacterPlayer();
+	ACyphersCharacterPlayer(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	//virtual void PostInitializeComponents() override;
@@ -70,6 +70,10 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class UInputAction> AttackAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, Meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<class UInputAction> TeleportAction;
+
 
 	void ShoulderMove(const FInputActionValue& Value);
 	void ShoulderLook(const FInputActionValue& Value);
@@ -134,4 +138,8 @@ protected:
 // UI Section
 protected:
 	virtual void SetupHUDWidget(class UCyphersHUDWidget* InHUDWidget) override;
+
+// Teleport Section
+protected:
+	void Teleport();
 };

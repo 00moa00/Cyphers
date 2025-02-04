@@ -36,7 +36,7 @@ class CYPHERS_API ACyphersCharacterBase : public ACharacter, public ICyphersAnim
 
 public:
 	// Sets default values for this character's properties
-	ACyphersCharacterBase();
+	ACyphersCharacterBase(const FObjectInitializer& ObjectInitializer);
 
 	virtual void PostInitializeComponents() override;
 

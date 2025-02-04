@@ -17,7 +17,8 @@
 DEFINE_LOG_CATEGORY(LogCyphersCharacter);
 
 // Sets default values
-ACyphersCharacterBase::ACyphersCharacterBase()
+ACyphersCharacterBase::ACyphersCharacterBase(const FObjectInitializer& ObjectInitializer)
+	: Super(ObjectInitializer)
 {
 	// Pawn
 	bUseControllerRotationPitch = false;
