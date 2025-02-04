@@ -230,6 +230,12 @@ void ACyphersCharacterPlayer::ShoulderMove(const FInputActionValue& Value)
 
 void ACyphersCharacterPlayer::ShoulderLook(const FInputActionValue& Value)
 {
+	if (!bCanAttack)
+	{
+		return;
+	}
+
+
 	FVector2D LookAxisVector = Value.Get<FVector2D>();
 
 	AddControllerYawInput(LookAxisVector.X);
@@ -238,6 +244,14 @@ void ACyphersCharacterPlayer::ShoulderLook(const FInputActionValue& Value)
 
 void ACyphersCharacterPlayer::QuaterMove(const FInputActionValue& Value)
 {
+	//클라이언트의 경우에는 모션을 수행하고 무브먼트를 잠구는데, 잠구고나서 RPC를 보낸다.
+	//근데 RPC가 늦어지면 무브먼트모드를 잠구기 전에 이동 입력이 전달 되어버린다.
+	//그러면 클라와 서버가 다르게 작동하게 되기 때문에 방어코드를 추가했다.
+	if (!bCanAttack)
+	{
+		return;
+	}
+
 	FVector2D MovementVector = Value.Get<FVector2D>();
 
 	float InputSizeSquared = MovementVector.SquaredLength();
