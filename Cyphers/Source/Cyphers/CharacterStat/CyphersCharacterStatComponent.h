@@ -7,6 +7,10 @@
 #include "GameData/CyphersCharacterStat.h"
 #include "CyphersCharacterStatComponent.generated.h"
 
+
+//
+
+
 DECLARE_MULTICAST_DELEGATE(FOnHpZeroDelegate);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHpChangedDelegate, float /*CurrentHp*/, float /*MaxHp*/);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnStatChangedDelegate, const FCyphersCharacterStat& /*BaseStat*/, const FCyphersCharacterStat& /*ModifierStat*/);
