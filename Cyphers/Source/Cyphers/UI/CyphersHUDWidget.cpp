@@ -13,14 +13,15 @@ UCyphersHUDWidget::UCyphersHUDWidget(const FObjectInitializer& ObjectInitializer
 void UCyphersHUDWidget::UpdateStat(const FCyphersCharacterStat& BaseStat, const FCyphersCharacterStat& ModifierStat)
 {
 	FCyphersCharacterStat TotalStat = BaseStat + ModifierStat;
-	HpBar->UpdateStat(BaseStat, ModifierStat);
+	//HpBar->UpdateStat(BaseStat, ModifierStat);
 	CharacterStat->UpdateStat(BaseStat, ModifierStat);
 }
 
-void UCyphersHUDWidget::UpdateHpBar(float NewCurrentHp)
+void UCyphersHUDWidget::UpdateHpBar(float NewCurrentHp, float NewMaxHp)
 {
-	HpBar->UpdateHpBar(NewCurrentHp);
+	HpBar->UpdateHpBar(NewCurrentHp, NewMaxHp);
 }
+
 
 void UCyphersHUDWidget::NativeConstruct()
 {

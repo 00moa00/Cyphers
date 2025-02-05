@@ -619,7 +619,7 @@ void ACyphersCharacterPlayer::SetupHUDWidget(UCyphersHUDWidget* InHUDWidget)
 	if (InHUDWidget)
 	{
 		InHUDWidget->UpdateStat(Stat->GetBaseStat(), Stat->GetModifierStat());
-		InHUDWidget->UpdateHpBar(Stat->GetCurrentHp());
+		InHUDWidget->UpdateHpBar(Stat->GetCurrentHp(), Stat->GetMaxHp());
 
 		Stat->OnStatChanged.AddUObject(InHUDWidget, &UCyphersHUDWidget::UpdateStat);
 		Stat->OnHpChanged.AddUObject(InHUDWidget, &UCyphersHUDWidget::UpdateHpBar);

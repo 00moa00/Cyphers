@@ -22,8 +22,8 @@ protected:
 	virtual void NativeConstruct() override;
 
 public:
-	void UpdateStat(const FCyphersCharacterStat& BaseStat, const FCyphersCharacterStat& ModifierStat);
-	void UpdateHpBar(float NewCurrentHp);
+	//void UpdateStat(const FCyphersCharacterStat& BaseStat, const FCyphersCharacterStat& ModifierStat);
+	void UpdateHpBar(float NewCurrentHp, float MaxHp);
 	FString GetHpStatText();
 
 protected:

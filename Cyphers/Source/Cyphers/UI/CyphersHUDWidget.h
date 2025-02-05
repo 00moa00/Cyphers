@@ -20,7 +20,7 @@ public:
 
 public:
 	void UpdateStat(const FCyphersCharacterStat& BaseStat, const FCyphersCharacterStat& ModifierStat);
-	void UpdateHpBar(float NewCurrentHp);
+	void UpdateHpBar(float NewCurrentHp, float NewMaxHp);
 
 protected:
 	virtual void NativeConstruct() override;

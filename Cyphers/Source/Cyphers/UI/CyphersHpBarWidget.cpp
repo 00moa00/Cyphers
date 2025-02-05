@@ -28,24 +28,25 @@ void UCyphersHpBarWidget::NativeConstruct()
 	}
 }
 
-void UCyphersHpBarWidget::UpdateStat(const FCyphersCharacterStat& BaseStat, const FCyphersCharacterStat& ModifierStat)
-{
-	MaxHp = (BaseStat + ModifierStat).MaxHp;
+//void UCyphersHpBarWidget::UpdateStat(const FCyphersCharacterStat& BaseStat, const FCyphersCharacterStat& ModifierStat)
+//{
+//	MaxHp = (BaseStat + ModifierStat).MaxHp;
+//
+//	if (HpProgressBar)
+//	{
+//		HpProgressBar->SetPercent(CurrentHp / MaxHp);
+//	}
+//
+//	if (HpStat)
+//	{
+//		HpStat->SetText(FText::FromString(GetHpStatText()));
+//	}
+//}
 
-	if (HpProgressBar)
-	{
-		HpProgressBar->SetPercent(CurrentHp / MaxHp);
-	}
-
-	if (HpStat)
-	{
-		HpStat->SetText(FText::FromString(GetHpStatText()));
-	}
-}
-
-void UCyphersHpBarWidget::UpdateHpBar(float NewCurrentHp)
+void UCyphersHpBarWidget::UpdateHpBar(float NewCurrentHp, float NewMaxHp)
 {
 	CurrentHp = NewCurrentHp;
+	MaxHp = NewMaxHp;
 
 	ensure(MaxHp > 0.0f);
 	if (HpProgressBar)

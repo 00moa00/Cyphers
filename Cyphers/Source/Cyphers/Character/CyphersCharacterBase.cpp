@@ -268,10 +268,10 @@ void ACyphersCharacterBase::SetupCharacterWidget(UCyphersUserWidget* InUserWidge
 	UCyphersHpBarWidget* HpBarWidget = Cast<UCyphersHpBarWidget>(InUserWidget);
 	if (HpBarWidget)
 	{
-		HpBarWidget->UpdateStat(Stat->GetBaseStat(), Stat->GetModifierStat());
-		HpBarWidget->UpdateHpBar(Stat->GetCurrentHp());
+		//HpBarWidget->UpdateStat(Stat->GetBaseStat(), Stat->GetModifierStat());
+		HpBarWidget->UpdateHpBar(Stat->GetCurrentHp(), Stat->GetMaxHp());
 		Stat->OnHpChanged.AddUObject(HpBarWidget, &UCyphersHpBarWidget::UpdateHpBar);
-		Stat->OnStatChanged.AddUObject(HpBarWidget, &UCyphersHpBarWidget::UpdateStat);
+		//Stat->OnStatChanged.AddUObject(HpBarWidget, &UCyphersHpBarWidget::UpdateStat);
 	}
 }
 
@@ -285,11 +285,16 @@ void ACyphersCharacterBase::TakeItem(UCyphersItemData* InItemData)
 
 void ACyphersCharacterBase::DrinkPotion(UCyphersItemData* InItemData)
 {
-	UCyphersPotionItemData* PotionItemData = Cast<UCyphersPotionItemData>(InItemData);
-	if (PotionItemData)
+	if (HasAuthority())
 	{
-		Stat->HealHp(PotionItemData->HealAmount);
+		UCyphersPotionItemData* PotionItemData = Cast<UCyphersPotionItemData>(InItemData);
+		if (PotionItemData)
+		{
+			Stat->HealHp(PotionItemData->HealAmount);
+		}
+
 	}
+
 }
 
 void ACyphersCharacterBase::EquipWeapon(UCyphersItemData* InItemData)
@@ -302,17 +307,30 @@ void ACyphersCharacterBase::EquipWeapon(UCyphersItemData* InItemData)
 			WeaponItemData->WeaponMesh.LoadSynchronous();
 		}
 		Weapon->SetSkeletalMesh(WeaponItemData->WeaponMesh.Get());
-		Stat->SetModifierStat(WeaponItemData->ModifierStat);
+	}
+
+	//서버에서만 스탯 값 변경
+
+	if (HasAuthority())
+	{
+		if (WeaponItemData)
+		{
+			Stat->SetModifierStat(WeaponItemData->ModifierStat);
+		}
 	}
 }
 
 void ACyphersCharacterBase::ReadScroll(UCyphersItemData* InItemData)
 {
-	UCyphersScrollItemData* ScrollItemData = Cast<UCyphersScrollItemData>(InItemData);
-	if (ScrollItemData)
+	if (HasAuthority())
 	{
-		Stat->AddBaseStat(ScrollItemData->BaseStat);
+		UCyphersScrollItemData* ScrollItemData = Cast<UCyphersScrollItemData>(InItemData);
+		if (ScrollItemData)
+		{
+			Stat->AddBaseStat(ScrollItemData->BaseStat);
+		}
 	}
+
 }
 
 int32 ACyphersCharacterBase::GetLevel()
