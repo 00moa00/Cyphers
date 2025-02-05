@@ -17,6 +17,14 @@ ACyphersPlayerController::ACyphersPlayerController()
 		CyphersHUDWidgetClass = CyphersHUDWidgetRef.Class;
 	}
 }
+void ACyphersPlayerController::PostInitializeComponents()
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+	Super::PostInitializeComponents();
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+}
 
 
 void ACyphersPlayerController::PostNetInit()

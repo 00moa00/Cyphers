@@ -3,22 +3,30 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameStateBase.h"
+#include "GameFramework/GameState.h"
 #include "CyphersGameState.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class CYPHERS_API ACyphersGameState : public AGameStateBase
+class CYPHERS_API ACyphersGameState : public AGameState
 {
 	GENERATED_BODY()
 	
 public:
-	virtual void HandleBeginPlay() override;
+	ACyphersGameState();
 
+	//virtual void HandleBeginPlay() override;
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const;
 	
-protected:
+public:
 	//클라이언트에 복제된 state가 시작될 때 불러와지는 함수.
-	virtual void OnRep_ReplicatedHasBegunPlay() override;
+	//virtual void OnRep_ReplicatedHasBegunPlay() override;
+
+	UPROPERTY(Transient, Replicated)
+	int32 RemainingTime;
+
+	int32 MatchPlayTime = 2000;
+	int32 ShowResultWaitingTime = 5;
 };

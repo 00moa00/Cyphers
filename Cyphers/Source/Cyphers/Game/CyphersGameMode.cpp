@@ -4,6 +4,10 @@
 //#include "CyphersCharacter.h"
 #include "UObject/ConstructorHelpers.h"
 #include "Cyphers.h"
+#include "EngineUtils.h"
+#include "GameFramework/PlayerStart.h"
+#include "CyphersGameState.h"
+#include "CyphersPlayerState.h"
 
 ACyphersGameMode::ACyphersGameMode()
 {
@@ -18,13 +22,16 @@ ACyphersGameMode::ACyphersGameMode()
 	{
 		PlayerControllerClass = PlayerControllerClassRef.Class;
 	}
+
+	GameStateClass = ACyphersGameState::StaticClass();
+	PlayerStateClass = ACyphersPlayerState::StaticClass();
 }
 
 
-void ACyphersGameMode::OnPlayerDead()
-{
-
-}
+//void ACyphersGameMode::OnPlayerDead()
+//{
+//
+//}
 
 //void ACyphersGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 //{
@@ -74,11 +81,85 @@ void ACyphersGameMode::OnPlayerDead()
 //
 //}
 //
-//void ACyphersGameMode::StartPlay()
-//{
-//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
-//
-//	Super::StartPlay();
-//
-//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
-//}
+
+FTransform ACyphersGameMode::GetRandomStartTransform() const
+{
+	if (PlayerStartArray.Num() == 0)
+	{
+		return FTransform(FVector(0.0f, 0.0f, 230.0f));
+	}
+
+	int32 RandIndex = FMath::RandRange(0, PlayerStartArray.Num() - 1);
+	return PlayerStartArray[RandIndex]->GetActorTransform();
+}
+
+
+void ACyphersGameMode::OnPlayerKilled(AController* Killer, AController* KilledPlayer, APawn* KilledPawn)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+	APlayerState* KillerPlayerState = Killer->PlayerState;
+	if (KillerPlayerState)
+	{
+		KillerPlayerState->SetScore(KillerPlayerState->GetScore() + 1);
+
+		if (KillerPlayerState->GetScore() > 2)
+		{
+			FinishMatch();
+		}
+	}
+}
+
+
+
+void ACyphersGameMode::StartPlay()
+{
+	Super::StartPlay();
+
+	for (APlayerStart* PlayerStart : TActorRange<APlayerStart>(GetWorld()))
+	{
+		PlayerStartArray.Add(PlayerStart);
+	}
+}
+
+void ACyphersGameMode::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+
+	GetWorldTimerManager().SetTimer(GameTimerHandle, this, &ACyphersGameMode::DefaultGameTimer, GetWorldSettings()->GetEffectiveTimeDilation(), true);
+}
+
+void ACyphersGameMode::DefaultGameTimer()
+{
+	ACyphersGameState* const CyphersGameState = Cast<ACyphersGameState>(GameState);
+
+	if (CyphersGameState && CyphersGameState->RemainingTime > 0)
+	{
+		CyphersGameState->RemainingTime--;
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Remaining Time : %d"), CyphersGameState->RemainingTime);
+		if (CyphersGameState->RemainingTime <= 0)
+		{
+			if (GetMatchState() == MatchState::InProgress)
+			{
+				FinishMatch();
+			}
+			else if (GetMatchState() == MatchState::WaitingPostMatch)
+			{
+				//모든 클라이언트가 접속을 유지한 상태에서 새로운 레벨로 이동할 수 있는 기능
+				//대신 플레이어 아이디값이 변경된다. 
+				GetWorld()->ServerTravel(TEXT("/Game/Cyphers/Maps/Part3Step2?listen"));
+			}
+		}
+	}
+
+}
+
+void ACyphersGameMode::FinishMatch()
+{
+	ACyphersGameState* const CyphersGameState = Cast<ACyphersGameState>(GameState);
+	if (CyphersGameState && IsMatchInProgress())
+	{
+		EndMatch();
+		CyphersGameState->RemainingTime = CyphersGameState->ShowResultWaitingTime;
+	}
+}

@@ -4,22 +4,34 @@
 #include "Game/CyphersGameState.h"
 
 #include "Cyphers.h"
+#include "Net/UnrealNetwork.h"
+//void ACyphersGameState::HandleBeginPlay()
+//{
+//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+//
+//	Super::HandleBeginPlay();
+//
+//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+//}
+//
+//void ACyphersGameState::OnRep_ReplicatedHasBegunPlay()
+//{
+//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+//
+//	Super::OnRep_ReplicatedHasBegunPlay();
+//
+//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+//}
 
-void ACyphersGameState::HandleBeginPlay()
+ACyphersGameState::ACyphersGameState()
 {
-	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	RemainingTime = MatchPlayTime;
 
-	Super::HandleBeginPlay();
-
-	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
-void ACyphersGameState::OnRep_ReplicatedHasBegunPlay()
+void ACyphersGameState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
-	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
-	Super::OnRep_ReplicatedHasBegunPlay();
-
-	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+	DOREPLIFETIME(ACyphersGameState, RemainingTime);
 }
- 

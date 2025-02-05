@@ -8,6 +8,8 @@
 #include "Interface/CyphersCharacterWidgetInterface.h"
 #include "Interface/CyphersCharacterItemInterface.h"
 #include "GameData/CyphersCharacterStat.h"
+#include "Engine/StreamableManager.h"
+
 #include "CyphersCharacterBase.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCyphersCharacter, Log, All);
@@ -112,4 +114,9 @@ public:
 	int32 GetLevel();
 	void SetLevel(int32 InNewLevel);
 	void ApplyStat(const FCyphersCharacterStat& BaseStat, const FCyphersCharacterStat& ModifierStat);
+
+public:
+	void MeshLoadCompleted();
+
+	TSharedPtr<FStreamableHandle> MeshHandle;
 };

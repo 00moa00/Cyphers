@@ -22,7 +22,7 @@ void ACyphersCharacterNonPlayer::PostInitializeComponents ()
 
 	ensure(NPCMeshes.Num() > 0);
 	int32 RandIndex = FMath::RandRange(0, NPCMeshes.Num() - 1);
-	NPCMeshHandle = UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(NPCMeshes[RandIndex], FStreamableDelegate::CreateUObject(this, &ACyphersCharacterNonPlayer::NPCMeshLoadCompleted));
+	MeshHandle = UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(NPCMeshes[RandIndex], FStreamableDelegate::CreateUObject(this, &ACyphersCharacterNonPlayer::MeshLoadCompleted));
 }
 
 void ACyphersCharacterNonPlayer::SetDead()
@@ -44,20 +44,20 @@ void ACyphersCharacterNonPlayer::SetDead()
 	), DeadEventDelayTime, false);
 }
 
-void ACyphersCharacterNonPlayer::NPCMeshLoadCompleted()
-{
-	if (NPCMeshHandle.IsValid())
-	{
-		USkeletalMesh* NPCMesh = Cast<USkeletalMesh>(NPCMeshHandle->GetLoadedAsset());
-		if (NPCMesh)
-		{
-			GetMesh()->SetSkeletalMesh(NPCMesh);
-			GetMesh()->SetHiddenInGame(false);
-		}
-	}
-
-	NPCMeshHandle->ReleaseHandle();
-}
+//void ACyphersCharacterNonPlayer::NPCMeshLoadCompleted()
+//{
+//	if (NPCMeshHandle.IsValid())
+//	{
+//		USkeletalMesh* NPCMesh = Cast<USkeletalMesh>(NPCMeshHandle->GetLoadedAsset());
+//		if (NPCMesh)
+//		{
+//			GetMesh()->SetSkeletalMesh(NPCMesh);
+//			GetMesh()->SetHiddenInGame(false);
+//		}
+//	}
+//
+//	NPCMeshHandle->ReleaseHandle();
+//}
 
 float ACyphersCharacterNonPlayer::GetAIPatrolRadius()
 {

@@ -25,10 +25,11 @@ void UCyphersCharacterStatComponent::InitializeComponent()
 	Super::InitializeComponent();
 
 	SetLevelStat(CurrentLevel);
-	MaxHp = BaseStat.MaxHp;
-	SetHp(MaxHp);
+	ResetStat();
 
 	OnStatChanged.AddUObject(this, &UCyphersCharacterStatComponent::SetNewMaxHp);
+
+	SetIsReplicated(true);
 }
 
 void UCyphersCharacterStatComponent::SetLevelStat(int32 InNewLevel)
@@ -125,5 +126,12 @@ void UCyphersCharacterStatComponent::OnRep_ModifierStat()
 {
 	Cyphers_SUBLOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
 	OnStatChanged.Broadcast(BaseStat, ModifierStat);
+}
+
+void UCyphersCharacterStatComponent::ResetStat()
+{
+	SetLevelStat(CurrentLevel);
+	MaxHp = BaseStat.MaxHp;
+	SetHp(MaxHp);
 }
 

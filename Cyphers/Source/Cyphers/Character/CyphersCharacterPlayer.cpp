@@ -20,6 +20,9 @@
 #include "GameFramework/GameStateBase.h"
 #include "EngineUtils.h"
 #include "CyCharacterMovementComponent.h"
+#include "Components/WidgetComponent.h"
+#include "GameFramework/PlayerState.h"
+#include "Engine/AssetManager.h"
 
 ACyphersCharacterPlayer::ACyphersCharacterPlayer(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UCyCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
@@ -101,31 +104,34 @@ void ACyphersCharacterPlayer::BeginPlay()
 
 void ACyphersCharacterPlayer::PossessedBy(AController* NewController)
 {
-	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("Begin"), *GetName());
+	//Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("Begin"), *GetName());
 
-	AActor* OwnerActor = GetOwner();
-	if (OwnerActor)
-	{
-		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Owner : %s"), *OwnerActor->GetName());
-	}
-	else
-	{
-		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No Owner"));
-	}
+	//AActor* OwnerActor = GetOwner();
+	//if (OwnerActor)
+	//{
+	//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Owner : %s"), *OwnerActor->GetName());
+	//}
+	//else
+	//{
+	//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No Owner"));
+	//}
 
 	Super::PossessedBy(NewController);
 
-	OwnerActor = GetOwner();
-	if (OwnerActor)
-	{
-		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Owner : %s"), *OwnerActor->GetName());
-	}
-	else
-	{
-		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No Owner"));
-	}
+	UpdateMeshFromPlayerState();
 
-	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("End"), *GetName());
+
+	//OwnerActor = GetOwner();
+	//if (OwnerActor)
+	//{
+	//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Owner : %s"), *OwnerActor->GetName());
+	//}
+	//else
+	//{
+	//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No Owner"));
+	//}
+
+	//Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s %s"), TEXT("End"), *GetName());
 
 }
 
@@ -288,12 +294,17 @@ void ACyphersCharacterPlayer::QuaterMove(const FInputActionValue& Value)
 void ACyphersCharacterPlayer::SetDead()
 {
 	Super::SetDead();
+	
+	GetWorldTimerManager().SetTimer(DeadTimerHandle, this, &ACyphersCharacterPlayer::ResetPlayer, 5.0f, false);
 
-	APlayerController* PlayerController = Cast<APlayerController>(GetController());
-	if (PlayerController)
-	{
-		DisableInput(PlayerController);
-	}
+
+	//APlayerController* PlayerController = Cast<APlayerController>(GetController());
+	//if (PlayerController)
+	//{
+	//	DisableInput(PlayerController);
+	//}
+
+
 }
 
 
@@ -328,13 +339,15 @@ void ACyphersCharacterPlayer::Attack()
 			bCanAttack = false;
 			GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_None);
 
-			FTimerHandle Handle;
-			GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
-				{
-					bCanAttack = true;
-					GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
-				}
-			), AttackTime, false, -1.0f);
+			GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &ACyphersCharacterPlayer::ResetAttack, AttackTime, false);
+
+			//FTimerHandle Handle;
+			//GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
+			//	{
+			//		bCanAttack = true;
+			//		GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+			//	}
+			//), AttackTime, false, -1.0f);
 
 			PlayAttackAnimation();
 		}
@@ -454,7 +467,7 @@ bool ACyphersCharacterPlayer::ServerRPCAttack_Validate(float AttackStartTime)
 	}
 
 	//마지막으로 공격한 시간과 현재 공격한 시간이 기본적으로 설정한 시간보다 작으면, 문제가 있을 것이다.
-	return (AttackStartTime - LastAttackStartTime) > AttackTime;
+	return (AttackStartTime - LastAttackStartTime) > (AttackTime - 0.4f);
 }
 
 void ACyphersCharacterPlayer::ServerRPCAttack_Implementation(float AttackStartTime)
@@ -475,13 +488,16 @@ void ACyphersCharacterPlayer::ServerRPCAttack_Implementation(float AttackStartTi
 
 	AttackTimeDifference = FMath::Clamp(AttackTimeDifference, 0.0f, AttackTime - 0.01f);
 
-	FTimerHandle Handle;
-	GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
-		{
-			bCanAttack = true;
-			OnRep_CanAttack();
-		}
-	), AttackTime - AttackTimeDifference, false, -1.0f);
+	//FTimerHandle Handle;
+	//GetWorld()->GetTimerManager().SetTimer(Handle, FTimerDelegate::CreateLambda([&]
+	//	{
+	//		bCanAttack = true;
+	//		OnRep_CanAttack();
+	//	}
+	//), AttackTime - AttackTimeDifference, false, -1.0f);
+
+
+	GetWorldTimerManager().SetTimer(AttackTimerHandle, this, &ACyphersCharacterPlayer::ResetAttack, AttackTime - AttackTimeDifference, false);
 
 	//마지막으로 공격한 시간을 저장
 	LastAttackStartTime = AttackStartTime;
@@ -635,4 +651,65 @@ void ACyphersCharacterPlayer::Teleport()
 	{
 		CyMovement->SetTeleportCommand();
 	}
+}
+
+void ACyphersCharacterPlayer::ResetPlayer()
+{
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if (AnimInstance)
+	{
+		AnimInstance->StopAllMontages(0.0f);
+	}
+
+	Stat->SetLevelStat(1);
+	Stat->ResetStat();
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+	SetActorEnableCollision(true);
+	HpBar->SetHiddenInGame(false);
+
+	if (HasAuthority())
+	{
+		ICyphersGameInterface* CyphersGameMode = GetWorld()->GetAuthGameMode<ICyphersGameInterface>();
+		if (CyphersGameMode)
+		{
+			FTransform NewTransform = CyphersGameMode->GetRandomStartTransform();
+			TeleportTo(NewTransform.GetLocation(), NewTransform.GetRotation().Rotator());
+		}
+	}
+}
+
+void ACyphersCharacterPlayer::ResetAttack()
+{
+	bCanAttack = true;
+	GetCharacterMovement()->SetMovementMode(EMovementMode::MOVE_Walking);
+}
+
+float ACyphersCharacterPlayer::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+	const float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+	if (Stat->GetCurrentHp() <= 0.0f)
+	{
+		ICyphersGameInterface* CyphersGameMode = GetWorld()->GetAuthGameMode<ICyphersGameInterface>();
+		if (CyphersGameMode)
+		{
+			CyphersGameMode->OnPlayerKilled(EventInstigator, GetController(), this);
+		}
+	}
+
+	return ActualDamage;
+}
+
+void ACyphersCharacterPlayer::UpdateMeshFromPlayerState()
+{
+	int32 MeshIndex = FMath::Clamp(GetPlayerState()->GetPlayerId() % PlayerMeshes.Num(), 0, PlayerMeshes.Num() - 1);
+	MeshHandle = UAssetManager::Get().GetStreamableManager().RequestAsyncLoad(PlayerMeshes[MeshIndex], FStreamableDelegate::CreateUObject(this, &ACyphersCharacterBase::MeshLoadCompleted));
+
+}
+
+void ACyphersCharacterPlayer::OnRep_PlayerState()
+{
+	Super::OnRep_PlayerState();
+
+	UpdateMeshFromPlayerState();
 }

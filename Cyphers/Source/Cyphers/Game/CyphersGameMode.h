@@ -3,20 +3,21 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "GameFramework/GameModeBase.h"
+#include "GameFramework/GameMode.h"
 #include "Interface/CyphersGameInterface.h"
 #include "CyphersGameMode.generated.h"
 
 UCLASS(minimalapi)
-class ACyphersGameMode : public AGameModeBase, public ICyphersGameInterface
+class ACyphersGameMode : public AGameMode, public ICyphersGameInterface
 {
 	GENERATED_BODY()
 
 public:
 	ACyphersGameMode();
 
-	virtual void OnPlayerDead() override;
-
+//	virtual void OnPlayerDead() override;
+	virtual FTransform GetRandomStartTransform() const;
+	virtual void OnPlayerKilled(AController* Killer, AController* KilledPlayer, APawn* KilledPawn);
 
 	//클라이언트의 접속요청을 처리하는 함수
 	//virtual void PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage) override;
@@ -28,7 +29,17 @@ public:
 	//virtual void PostLogin(APlayerController* NewPlayer) override;
 
 	//게임의 시작을 지시하는 함수
-	//virtual void StartPlay() override;
+	virtual void StartPlay() override;
+
+protected:
+	virtual void PostInitializeComponents() override;
+	virtual void DefaultGameTimer();
+	void FinishMatch();
+
+	FTimerHandle GameTimerHandle;
+
+protected:
+	TArray<TObjectPtr<class APlayerStart>> PlayerStartArray;
 };
 
 

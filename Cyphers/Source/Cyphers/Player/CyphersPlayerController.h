@@ -21,7 +21,7 @@ public:
 	
 protected:
 	//액터를 초기화할 떄
-	//virtual void PostInitializeComponents() override;
+	virtual void PostInitializeComponents() override;
 
 
 	//네트워크에서 초기화에 필요한 정보를 전달받은 것이 모두 마무리가 되면 호출
