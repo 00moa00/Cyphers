@@ -36,4 +36,18 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = HUD)
 	TObjectPtr<class UCyphersHUDWidget> CyphersHUDWidget;
+
+
+public :
+	void Login();
+	void MoveToLobby();
+
+	UFUNCTION(Server, Reliable, WithValidation)
+	void ServerRequestMoveToLobby();
+
+
+	UFUNCTION(Server, Reliable)
+	void ClientRPCLogin();
+
+
 };

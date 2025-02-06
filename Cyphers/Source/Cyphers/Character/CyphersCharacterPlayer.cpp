@@ -117,7 +117,7 @@ void ACyphersCharacterPlayer::PossessedBy(AController* NewController)
 	//}
 
 	Super::PossessedBy(NewController);
-
+	SetCharacterControl(CurrentCharacterControlType);
 	UpdateMeshFromPlayerState();
 
 
@@ -168,7 +168,7 @@ void ACyphersCharacterPlayer::SetupPlayerInputComponent(class UInputComponent* P
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-	UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
+	EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent);
 
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 	EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
@@ -178,7 +178,7 @@ void ACyphersCharacterPlayer::SetupPlayerInputComponent(class UInputComponent* P
 	EnhancedInputComponent->BindAction(QuaterMoveAction, ETriggerEvent::Triggered, this, &ACyphersCharacterPlayer::QuaterMove);
 	EnhancedInputComponent->BindAction(AttackAction, ETriggerEvent::Triggered, this, &ACyphersCharacterPlayer::Attack);
 	EnhancedInputComponent->BindAction(TeleportAction, ETriggerEvent::Triggered, this, &ACyphersCharacterPlayer::Teleport);
-
+	//EnhancedInputComponent->Deac
 }
 
 void ACyphersCharacterPlayer::ChangeCharacterControl()

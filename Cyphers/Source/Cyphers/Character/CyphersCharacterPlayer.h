@@ -43,8 +43,16 @@ protected:
 	void SetCharacterControl(ECharacterControlType NewCharacterControlType);
 	virtual void SetCharacterControlData(const class UCyphersCharacterControlData* CharacterControlData) override;
 
+
+public:
+	TObjectPtr<class UEnhancedInputComponent> EnhancedInputComponent;
+
+
 // Camera Section
 protected:
+
+
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, Meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<class USpringArmComponent> CameraBoom;
 

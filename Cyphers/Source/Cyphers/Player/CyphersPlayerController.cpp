@@ -6,6 +6,12 @@
 #include "Kismet/GameplayStatics.h"
 #include "CyphersSaveGame.h"
 #include "Cyphers.h"
+#include "Net/UnrealNetwork.h"
+#include "Character/CyphersCharacterPlayer.h"
+#include"Game/CyphersGameMode.h"
+#include "UI/CyphersLoginWidget.h"
+#include <Components\EditableTextBox.h>
+#include "Game/CyphersPlayerState.h"
 
 DEFINE_LOG_CATEGORY(LogCyphersPlayerController);
 
@@ -57,6 +63,8 @@ void ACyphersPlayerController::BeginPlay()
 
 	FInputModeGameOnly GameOnlyInputMode;
 	SetInputMode(GameOnlyInputMode);
+
+	Login();
 }
 
 
@@ -66,6 +74,103 @@ void ACyphersPlayerController::OnPossess(APawn* InPawn)
 
 	Super::OnPossess(InPawn);
 
+	//beginplay로 변경하니깐 클라에서 생겼다. 왜지
+	//Login();
+
 	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
 }
 
+void ACyphersPlayerController::Login()
+{
+	if (IsLocalController() == false)
+	{
+		return;
+	}
+
+	//닉네임 설정
+	UClass* LoginWidgetClass = LoadClass<UCyphersLoginWidget>(nullptr, TEXT("/Game/Cyphers/UI/WBP_LoginWidget.WBP_LoginWidget_C"));
+
+	UCyphersLoginWidget* WidgetClass = CreateWidget<UCyphersLoginWidget>(this, LoginWidgetClass);
+
+	if (WidgetClass != nullptr)
+	{
+		WidgetClass->AddToViewport();  // 화면에 추가
+		WidgetClass->SetFocus();
+		WidgetClass->InputTextBox->SetFocus();
+
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(WidgetClass->TakeWidget());  // 위젯에 포커스 설정
+		this->SetInputMode(InputMode);
+
+		this->SetIgnoreMoveInput(true);  // 캐릭터의 움직임을 무시하게 함
+
+	}
+}
+
+void ACyphersPlayerController::MoveToLobby()
+{
+	ACyphersGameMode* GameMode = Cast<ACyphersGameMode>(UGameplayStatics::GetGameMode(this));
+	//GetRandomStartTransform
+
+
+	if (HasAuthority())
+	{
+		//ServerRequestMoveToLobby();
+		ACyphersCharacterPlayer* NewPawn = GetWorld()->SpawnActor<ACyphersCharacterPlayer>(ACyphersCharacterPlayer::StaticClass(), GameMode->GetRandomStartTransform().GetLocation(), FRotator::ZeroRotator);
+		Possess(NewPawn);
+		UGameplayStatics::LoadStreamLevel(GetWorld(), "LobbyLevel", true, true, FLatentActionInfo());
+
+
+	}
+	//else
+	//{
+	//	FString LobbyLevelURL = TEXT("/Game/Cyphers/Level/LobbyLevel");
+
+	//	ClientTravel(LobbyLevelURL, TRAVEL_Absolute);
+	//}
+
+}
+
+
+void ACyphersPlayerController::ClientRPCLogin_Implementation()
+{
+	if (IsLocalController() == false)
+	{
+		//	ClientRPCLogin();
+		return;
+	}
+
+	UClass* LoginWidgetClass = LoadClass<UCyphersLoginWidget>(nullptr, TEXT("/Game/Cyphers/UI/WBP_LoginWidget.WBP_LoginWidget_C"));
+
+	UCyphersLoginWidget* WidgetClass = CreateWidget<UCyphersLoginWidget>(this, LoginWidgetClass);
+
+	if (WidgetClass != nullptr)
+	{
+		WidgetClass->AddToViewport();  // 화면에 추가
+		WidgetClass->SetFocus();
+		WidgetClass->InputTextBox->SetFocus();
+
+		FInputModeUIOnly InputMode;
+		InputMode.SetWidgetToFocus(WidgetClass->TakeWidget());  // 위젯에 포커스 설정
+		this->SetInputMode(InputMode);
+
+		this->SetIgnoreMoveInput(true);  // 캐릭터의 움직임을 무시하게 함
+
+		//ACyphersCharacterPlayer* Player = Cast <ACyphersCharacterPlayer> (NewPlayer->GetPawn());
+		//Player->EnhancedInputComponent->Deactivate();
+		//Player->EnhancedInputComponent->de
+	}
+}
+
+void ACyphersPlayerController::ServerRequestMoveToLobby_Implementation()
+{
+	// 이 함수는 해당 클라이언트에서 실행됨
+	FString LobbyLevelURL = TEXT("/Game/Cyphers/Level/LobbyLevel");
+
+	ClientTravel(LobbyLevelURL, TRAVEL_Absolute);
+}
+
+bool ACyphersPlayerController::ServerRequestMoveToLobby_Validate()
+{
+	return true;
+}

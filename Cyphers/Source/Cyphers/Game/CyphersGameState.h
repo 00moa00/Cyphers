@@ -29,4 +29,11 @@ public:
 
 	int32 MatchPlayTime = 2000;
 	int32 ShowResultWaitingTime = 5;
+
+protected:	
+	//Chat Section
+//	TArray<class UChatData> ChatList;
+
+protected:
+
 };

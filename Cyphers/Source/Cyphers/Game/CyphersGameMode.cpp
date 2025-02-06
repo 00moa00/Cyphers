@@ -9,7 +9,16 @@
 #include "CyphersGameState.h"
 #include "CyphersPlayerState.h"
 
+#include "Net/UnrealNetwork.h"
+#include "EnhancedInput/Public/EnhancedInputSubsystemInterface.h"
+#include "Character/CyphersCharacterPlayer.h"
+#include "Player/CyphersPlayerController.h"
+
+#include "EnhancedInputComponent.h"
+
 ACyphersGameMode::ACyphersGameMode()
+	:
+	AddPlayerID(0)
 {
 	static ConstructorHelpers::FClassFinder<APawn> DefaultPawnClassRef(TEXT("/Script/Engine.Blueprint'/Game/Cyphers/Blueprint/BP_CyphersCharacterPlayer.BP_CyphersCharacterPlayer_C'"));
 	if (DefaultPawnClassRef.Class)
@@ -33,17 +42,19 @@ ACyphersGameMode::ACyphersGameMode()
 //
 //}
 
-//void ACyphersGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
-//{
-//	//여기서부터 클라이언트가 새롭게 만들어졌다.
-//
-//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("==========================================================="));
-//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
-//
-//	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
-//
-//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
-//}
+void ACyphersGameMode::PreLogin(const FString& Options, const FString& Address, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
+{
+	//여기서부터 클라이언트가 새롭게 만들어졌다.
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("==========================================================="));
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+	Super::PreLogin(Options, Address, UniqueId, ErrorMessage);
+
+	
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+}
 //
 //APlayerController* ACyphersGameMode::Login(UPlayer* NewPlayer, ENetRole InRemoteRole, const FString& Portal, const FString& Options, const FUniqueNetIdRepl& UniqueId, FString& ErrorMessage)
 //{
@@ -55,32 +66,53 @@ ACyphersGameMode::ACyphersGameMode()
 //	return NewPlayerController;
 //}
 //
-//void ACyphersGameMode::PostLogin(APlayerController* NewPlayer)
-//{
-//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
-//
-//	Super::PostLogin(NewPlayer);
-//
-//
-//	UNetDriver* NetDriver = GetNetDriver();
-//	if (NetDriver)
-//	{
-//		for (const auto& Connection : NetDriver->ClientConnections)
-//		{
-//			Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Client Connections : %s"), *Connection->GetName());
-//		}
-//	}
-//	else
-//	{
-//		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No NetDriver"));
-//	}
-//
-//
-//
-//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
-//
-//}
-//
+void ACyphersGameMode::PostLogin(APlayerController* NewPlayer)
+{
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("Begin"));
+
+	Super::PostLogin(NewPlayer);
+
+
+	UNetDriver* NetDriver = GetNetDriver();
+	if (NetDriver)
+	{
+		for (const auto& Connection : NetDriver->ClientConnections)
+		{
+			Cyphers_LOG(LogCyphersNetwork, Log, TEXT("Client Connections : %s"), *Connection->GetName());
+		}
+	}
+	else
+	{
+		Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("No NetDriver"));
+	}
+
+	// 로그인한 플레이어의 PlayerState에서 고유 ID 가져오기
+	ACyphersPlayerState* MyPS = NewPlayer ? Cast<ACyphersPlayerState>(NewPlayer->PlayerState) : nullptr;
+	if (MyPS)
+	{
+		if (RegisterPlayerID(++AddPlayerID) == true)
+		{
+			MyPS->CyphersPlayerID = AddPlayerID;
+			// 등록 성공 
+			Cyphers_LOG(LogCyphersNetwork, Log, TEXT("새로운 플레이어가 성공적으로 등록되었습니다: %s"), AddPlayerID);
+
+			//ACyphersPlayerController* CyphersController = Cast<ACyphersPlayerController>(NewPlayer);
+			//CyphersController->ClientRPCLogin();
+
+		}
+		else
+		{
+			Cyphers_LOG(LogCyphersNetwork, Warning, TEXT("플레이어 ID 등록 실패 (중복): %s"), AddPlayerID);
+		}
+
+	}
+
+	
+
+	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("%s"), TEXT("End"));
+
+}
+
 
 FTransform ACyphersGameMode::GetRandomStartTransform() const
 {
@@ -163,3 +195,57 @@ void ACyphersGameMode::FinishMatch()
 		CyphersGameState->RemainingTime = CyphersGameState->ShowResultWaitingTime;
 	}
 }
+
+bool ACyphersGameMode::RegisterPlayerID(const int NewPlayerID)
+{
+
+	if (RegisteredPlayerInfos.Contains(NewPlayerID) == true)
+	{
+		//Cyphers_LOG(LogCyphersNetwork, Warning, TEXT("중복된 플레이어 ID: %s"), NewPlayerID);
+		return false; // 중복된 아이디가 있으면 실패
+
+	}
+
+	//플레이어 등록
+	RegisteredPlayerInfos.Add({ NewPlayerID, FPlayerInfo("") });
+
+
+	//Cyphers_LOG(LogCyphersNetwork, Log, TEXT("플레이어 ID 등록됨: %s"), NewPlayerID);
+
+	return true;
+}
+
+
+
+//bool ACyphersGameMode::ServerRegisterPlayerName_Validate(const int NewPlayerID, const FString& NewPlayerName)
+//{
+//	//검증 강화
+//	return true;
+//}
+//
+//void ACyphersGameMode::ServerRegisterPlayerName_Implementation(const int NewPlayerID, const FString& NewPlayerName)
+//{
+//	//아이디 확인
+//	if (RegisteredPlayerInfos.Contains(NewPlayerID) == false)
+//	{
+//		return false;
+//	}
+//
+//
+//	//중복된 아이디가 없는지 확인
+//	for (auto& list : RegisteredPlayerInfos)
+//	{
+//		if (list.Value.Name == NewPlayerName)
+//		{
+//			Cyphers_LOG(LogCyphersNetwork, Warning, TEXT("중복된 닉네임: %s"), NewPlayerName);
+//
+//			return false; // 중복된 닉네임이 있으면 실패
+//		}
+//	}
+//
+//	//닉네임 등록
+//	RegisteredPlayerInfos[NewPlayerID].Name = NewPlayerName;
+//
+//	Cyphers_LOG(LogCyphersNetwork, Log, TEXT("플레이어 닉네임 등록됨: %s"), NewPlayerName);
+//
+//}
