@@ -40,10 +40,14 @@ protected:
 
 public :
 	void Login();
-	void MoveToLobby();
+	void RegisterPlayer();
 
-	UFUNCTION(Server, Reliable, WithValidation)
-	void ServerRequestMoveToLobby();
+	UFUNCTION(Server, Reliable)
+	void ServerRPC_RegisterPlayer();
+
+
+	UFUNCTION(Client, Reliable)
+	void ClientRPC_RegisterPlayer(ACyphersCharacterPlayer* _NewPawn);
 
 
 	UFUNCTION(Server, Reliable)

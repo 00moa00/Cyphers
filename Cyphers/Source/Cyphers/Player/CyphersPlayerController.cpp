@@ -107,28 +107,68 @@ void ACyphersPlayerController::Login()
 	}
 }
 
-void ACyphersPlayerController::MoveToLobby()
+void ACyphersPlayerController::RegisterPlayer()
 {
-	ACyphersGameMode* GameMode = Cast<ACyphersGameMode>(UGameplayStatics::GetGameMode(this));
-	//GetRandomStartTransform
-
-
 	if (HasAuthority())
 	{
-		//ServerRequestMoveToLobby();
-		ACyphersCharacterPlayer* NewPawn = GetWorld()->SpawnActor<ACyphersCharacterPlayer>(ACyphersCharacterPlayer::StaticClass(), GameMode->GetRandomStartTransform().GetLocation(), FRotator::ZeroRotator);
+		ACyphersGameMode* GameMode = Cast<ACyphersGameMode>(UGameplayStatics::GetGameMode(this));
+		//GetRandomStartTransform
+		ACyphersCharacterPlayer* NewPawn = GetWorld()->SpawnActor<ACyphersCharacterPlayer>(ACyphersCharacterPlayer::StaticClass(), FTransform(FVector(0.0f, 0.0f, 230.0f)).GetLocation()
+			, FRotator::ZeroRotator);
 		Possess(NewPawn);
 		UGameplayStatics::LoadStreamLevel(GetWorld(), "LobbyLevel", true, true, FLatentActionInfo());
 
 
+		FInputModeGameOnly GameOnlyInputMode;
+		SetInputMode(GameOnlyInputMode);
+		this->SetIgnoreMoveInput(false);
 	}
-	//else
-	//{
-	//	FString LobbyLevelURL = TEXT("/Game/Cyphers/Level/LobbyLevel");
 
-	//	ClientTravel(LobbyLevelURL, TRAVEL_Absolute);
-	//}
+	else
+	{
+		ServerRPC_RegisterPlayer();
+	}
 
+}
+
+void ACyphersPlayerController::ClientRPC_RegisterPlayer_Implementation(ACyphersCharacterPlayer* _NewPawn)
+{
+	if (IsLocalController() == false)
+	{
+		return;
+
+	}
+
+	//Possess(_NewPawn);
+
+	FInputModeGameOnly GameOnlyInputMode;
+	SetInputMode(GameOnlyInputMode);
+	SetIgnoreMoveInput(false);
+}
+
+void ACyphersPlayerController::ServerRPC_RegisterPlayer_Implementation()
+{
+	if (HasAuthority() == false)
+	{
+		return;
+
+	}
+	ACyphersCharacterPlayer* NewPawn = GetWorld()->SpawnActor<ACyphersCharacterPlayer>(ACyphersCharacterPlayer::StaticClass(), FTransform(FVector(0.0f, 0.0f, 230.0f)).GetLocation()
+		, FRotator::ZeroRotator);
+
+	// 서버에서 Possess 실행 (서버가 컨트롤하도록 설정)
+	Possess(NewPawn);
+
+	FTimerHandle TimerHandle;
+	GetWorld()->GetTimerManager().SetTimer(TimerHandle, [this, NewPawn]()
+		{
+			if (NewPawn && NewPawn->IsValidLowLevelFast()) // 액터가 유효한지 다시 확인
+			{
+				ClientRPC_RegisterPlayer(NewPawn);
+			}
+		}, 0.5f, false);  // 0.5초 후 클라이언트 RPC 실행
+
+	//UGameplayStatics::LoadStreamLevel(GetWorld(), "LobbyLevel", true, true, FLatentActionInfo());
 }
 
 
@@ -162,15 +202,3 @@ void ACyphersPlayerController::ClientRPCLogin_Implementation()
 	}
 }
 
-void ACyphersPlayerController::ServerRequestMoveToLobby_Implementation()
-{
-	// 이 함수는 해당 클라이언트에서 실행됨
-	FString LobbyLevelURL = TEXT("/Game/Cyphers/Level/LobbyLevel");
-
-	ClientTravel(LobbyLevelURL, TRAVEL_Absolute);
-}
-
-bool ACyphersPlayerController::ServerRequestMoveToLobby_Validate()
-{
-	return true;
-}

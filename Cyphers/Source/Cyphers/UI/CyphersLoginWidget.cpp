@@ -51,7 +51,7 @@ void UCyphersLoginWidget::RegisterPlayerName(bool bSuccess)
 	{
 		this->RemoveFromParent();
 		ACyphersPlayerController* PlayerController = Cast<ACyphersPlayerController>(GetOwningPlayer());
-		PlayerController->MoveToLobby();
+		PlayerController->RegisterPlayer();
 	}
 	else
 	{

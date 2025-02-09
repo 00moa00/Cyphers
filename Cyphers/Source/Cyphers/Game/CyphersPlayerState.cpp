@@ -7,6 +7,7 @@
 #include "Misc/Guid.h"
 #include "Net/UnrealNetwork.h"
 #include "Game/CyphersGameMode.h"
+#include "Character/CyphersCharacterPlayer.h"
 
 ACyphersPlayerState::ACyphersPlayerState()
 {
@@ -23,6 +24,7 @@ void ACyphersPlayerState::RegisterPlayerName(const FString& NewPlayerName)
 		if (GameMode->bRegisteredPlayerID(CyphersPlayerID) == false || GameMode->bRegisteredPlayerName(NewPlayerName) == false)
 		{
 			OnRegisteredPlayerName.Broadcast(false);
+			return;
 		}
 
 
@@ -65,6 +67,8 @@ void ACyphersPlayerState::ServerRPC_RegisterPlayerName_Implementation(const FStr
 	if (GameMode->bRegisteredPlayerID(CyphersPlayerID) == false)
 	{
 		ClientRPC_RegisteredPlayerName(false);
+		return;
+
 		//return false;
 	}
 
@@ -73,12 +77,19 @@ void ACyphersPlayerState::ServerRPC_RegisterPlayerName_Implementation(const FStr
 	if (GameMode->bRegisteredPlayerName(NewPlayerName) == false)
 	{
 		ClientRPC_RegisteredPlayerName(false);
+		return;
+
 	}
+
 
 	GameMode->ChangePlayerName(CyphersPlayerID, NewPlayerName);
 
 	// 등록 성공
 	ClientRPC_RegisteredPlayerName(true);
+
+
+	//Possess(NewPawn);
+
 	//Cyphers_LOG(LogCyphersNetwork, Log, TEXT("플레이어 닉네임 등록됨: %s"), NewPlayerName);
 
 	//return true;
