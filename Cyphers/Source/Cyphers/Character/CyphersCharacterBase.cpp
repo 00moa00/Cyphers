@@ -13,6 +13,8 @@
 #include "UI/CyphersWidgetComponent.h"
 #include "UI/CyphersHpBarWidget.h"
 #include "Item/CyphersItems.h"
+#include "Game/CyphersPlayerState.h"
+#include "GameFramework/PlayerState.h"
 
 DEFINE_LOG_CATEGORY(LogCyphersCharacter);
 
@@ -91,13 +93,13 @@ ACyphersCharacterBase::ACyphersCharacterBase(const FObjectInitializer& ObjectIni
 	// Widget Component 
 	HpBar = CreateDefaultSubobject<UCyphersWidgetComponent>(TEXT("Widget"));
 	HpBar->SetupAttachment(GetMesh());
-	HpBar->SetRelativeLocation(FVector(0.0f, 0.0f, 180.0f));
+	HpBar->SetRelativeLocation(FVector(0.0f, 0.0f, 220.0f));
 	static ConstructorHelpers::FClassFinder<UUserWidget> HpBarWidgetRef(TEXT("/Game/Cyphers/UI/WBP_HpBar.WBP_HpBar_C"));
 	if (HpBarWidgetRef.Class)
 	{
 		HpBar->SetWidgetClass(HpBarWidgetRef.Class);
 		HpBar->SetWidgetSpace(EWidgetSpace::Screen);
-		HpBar->SetDrawSize(FVector2D(150.0f, 15.0f));
+		//HpBar->SetDrawSize(FVector2D(150.0f, 15.0f));
 		HpBar->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
@@ -270,9 +272,15 @@ void ACyphersCharacterBase::SetupCharacterWidget(UCyphersUserWidget* InUserWidge
 	{
 		//HpBarWidget->UpdateStat(Stat->GetBaseStat(), Stat->GetModifierStat());
 		HpBarWidget->UpdateHpBar(Stat->GetCurrentHp(), Stat->GetMaxHp());
+		ACyphersPlayerState* CyphersPlayerState = Cast<ACyphersPlayerState>(GetPlayerState());
+		if (CyphersPlayerState != nullptr)
+		{
+			HpBarWidget->SetPlayerNameText(FText::FromString(CyphersPlayerState->CyphersPlayerName));
+
+		}
 		Stat->OnHpChanged.AddUObject(HpBarWidget, &UCyphersHpBarWidget::UpdateHpBar);
 		//Stat->OnStatChanged.AddUObject(HpBarWidget, &UCyphersHpBarWidget::UpdateStat);
-	}
+	}	
 }
 
 void ACyphersCharacterBase::TakeItem(UCyphersItemData* InItemData)

@@ -29,7 +29,7 @@ void ACyphersPlayerState::RegisterPlayerName(const FString& NewPlayerName)
 
 
 		GameMode->ChangePlayerName(CyphersPlayerID, NewPlayerName);
-
+		CyphersPlayerName = NewPlayerName;
 		//Cyphers_LOG(LogCyphersNetwork, Log, TEXT("플레이어 닉네임 등록됨: %s"), NewPlayerName);
 
 		OnRegisteredPlayerName.Broadcast(true);
@@ -83,6 +83,7 @@ void ACyphersPlayerState::ServerRPC_RegisterPlayerName_Implementation(const FStr
 
 
 	GameMode->ChangePlayerName(CyphersPlayerID, NewPlayerName);
+	CyphersPlayerName = NewPlayerName;
 
 	// 등록 성공
 	ClientRPC_RegisteredPlayerName(true);

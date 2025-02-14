@@ -25,6 +25,7 @@ public:
 	//void UpdateStat(const FCyphersCharacterStat& BaseStat, const FCyphersCharacterStat& ModifierStat);
 	void UpdateHpBar(float NewCurrentHp, float MaxHp);
 	FString GetHpStatText();
+	void SetPlayerNameText(FText _Name);
 
 protected:
 	UPROPERTY()
@@ -32,6 +33,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<class UTextBlock> HpStat;
+
+	UPROPERTY()
+	TObjectPtr<class UTextBlock> NameText;
 
 	UPROPERTY()
 	float CurrentHp;

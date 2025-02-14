@@ -21,6 +21,10 @@ void UCyphersHpBarWidget::NativeConstruct()
 	HpStat = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtHpStat")));
 	ensure(HpStat);
 
+
+	NameText = Cast<UTextBlock>(GetWidgetFromName(TEXT("TxtPlayerName")));
+	ensure(NameText);
+
 	ICyphersCharacterWidgetInterface* CharacterWidget = Cast<ICyphersCharacterWidgetInterface>(OwningActor);
 	if (CharacterWidget)
 	{
@@ -63,4 +67,9 @@ void UCyphersHpBarWidget::UpdateHpBar(float NewCurrentHp, float NewMaxHp)
 FString UCyphersHpBarWidget::GetHpStatText()
 {
 	return FString::Printf(TEXT("%.0f/%0.f"), CurrentHp, MaxHp);
+}
+
+void UCyphersHpBarWidget::SetPlayerNameText(FText _Name)
+{
+	NameText->SetText(_Name);
 }

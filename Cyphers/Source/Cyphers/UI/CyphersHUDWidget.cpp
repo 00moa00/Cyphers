@@ -28,7 +28,7 @@ void UCyphersHUDWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	HpBar = Cast<UCyphersHpBarWidget>(GetWidgetFromName(TEXT("WBP_HpBar")));
-	ensure(HpBar);
+		ensure(HpBar);
 
 	CharacterStat = Cast<UCyphersCharacterStatWidget>(GetWidgetFromName(TEXT("WBP_CharacterStat")));
 	ensure(CharacterStat);
